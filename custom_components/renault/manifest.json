@@ -1,0 +1,13 @@
+{
+  "domain": "renault",
+  "name": "Renault",
+  "version": "2025.03.18",
+  "codeowners": ["@epenet"],
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/renault",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "loggers": ["renault_api"],
+  "quality_scale": "silver",
+  "requirements": ["renault-api==0.2.9"]
+}
