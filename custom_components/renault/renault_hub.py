@@ -50,7 +50,6 @@ class RenaultHub:
         self._adjusted_hourly_rate_limit = None
         self._last_cph_change = None
 
-        self._max_call_per_hour = MAX_CALLS_PER_HOURS
         self._got_throttled_at_time = None
 
 
@@ -69,7 +68,7 @@ class RenaultHub:
     def get_wait_time_for_next_call(self):
         # adjust the rolling buffer of calls
         self.add_api_call(0)
-        if self.get_current_calls_count_per_hour() <= self._max_call_per_hour:
+        if self.get_current_calls_count_per_hour() <= MAX_CALLS_PER_HOURS:
             return 0
 
         return 3600 - (time() - self.rolling_hour[0])
@@ -109,7 +108,7 @@ class RenaultHub:
 
         num_call_per_scan = len(COORDINATORS)*len(vehicles.vehicleLinks)
 
-        scan_interval = timedelta(seconds=(3600*num_call_per_scan)/self._max_call_per_hour)
+        scan_interval = timedelta(seconds=(3600*num_call_per_scan)/MAX_CALLS_PER_HOURS)
 
         if vehicles.vehicleLinks:
             if any(
@@ -139,7 +138,7 @@ class RenaultHub:
                 vehicle = self._vehicles[vehicle_link.vin]
                 num_call_per_scan += len(vehicle.coordinators)
 
-            new_scan_interval = timedelta(seconds=(3600*num_call_per_scan)/self._max_call_per_hour)
+            new_scan_interval = timedelta(seconds=(3600*num_call_per_scan)/MAX_CALLS_PER_HOURS)
             if new_scan_interval != scan_interval:
                 # we need to change the vehicles with the right scan interval
                 for vehicle_link in vehicles.vehicleLinks:
