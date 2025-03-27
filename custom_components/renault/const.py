@@ -7,7 +7,7 @@ DOMAIN = "renault"
 CONF_LOCALE = "locale"
 CONF_KAMEREON_ACCOUNT_ID = "kamereon_account_id"
 
-# normal number of allowed calls per seconds to the API
+# normal number of allowed calls per hour to the API
 MAX_CALLS_PER_HOURS = 100
 
 # If throttled time to pause the updates, in seconds
