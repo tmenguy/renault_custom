@@ -19,8 +19,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
-    from .renault_hub import RenaultHub
     from . import RenaultConfigEntry
+    from .renault_hub import RenaultHub
 
 T = TypeVar("T", bound=KamereonVehicleDataAttributes)
 
@@ -28,6 +28,7 @@ T = TypeVar("T", bound=KamereonVehicleDataAttributes)
 _PARALLEL_SEMAPHORE = asyncio.Semaphore(1)
 
 LOGGER = logging.getLogger(__name__)
+
 
 class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
     """Handle vehicle communication with Renault servers."""
@@ -60,8 +61,6 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
         self._has_already_worked = False
         self._hub = hub
 
-
-
     async def _async_update_data(self) -> T:
         """Fetch the latest data from the source."""
 
@@ -72,11 +71,13 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
         wait_seconds = self._hub.get_wait_time_for_next_call()
         if wait_seconds > 0:
             # we have called the API too many times, wait before calling again ... or simply wait for the next update, self.data?
-            if self.update_interval is not None and 2*wait_seconds > self.update_interval.total_seconds():
+            if (
+                self.update_interval is not None
+                and 2 * wait_seconds > self.update_interval.total_seconds()
+            ):
                 # too many calls ... wait for next scan, do as if data hasn't changed
                 return self.data
-            else:
-                await asyncio.sleep(2*wait_seconds)
+            await asyncio.sleep(2 * wait_seconds)
 
         try:
             async with _PARALLEL_SEMAPHORE:
@@ -104,7 +105,7 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
             if err.error_code == "err.func.wired.overloaded":
                 # ok we do have a throttling at API level ... we should wait a lot for the next update to be called?
                 self._hub.got_throttled()
-                LOGGER.warning(f"API throttled: {err}")
+                LOGGER.warning("API throttled")
                 if self._has_already_worked:
                     return self.data
 

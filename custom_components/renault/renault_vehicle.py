@@ -19,8 +19,8 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 
 if TYPE_CHECKING:
-    from .renault_hub import RenaultHub
     from . import RenaultConfigEntry
+    from .renault_hub import RenaultHub
 
 from .const import DOMAIN
 from .coordinator import RenaultDataUpdateCoordinator

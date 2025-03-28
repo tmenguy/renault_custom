@@ -11,7 +11,7 @@ CONF_KAMEREON_ACCOUNT_ID = "kamereon_account_id"
 MAX_CALLS_PER_HOURS = 100
 
 # If throttled time to pause the updates, in seconds
-COOLING_UPDATES_SECONDS = 60 * 15 # 15 minutes
+COOLING_UPDATES_SECONDS = 60 * 15  # 15 minutes
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
