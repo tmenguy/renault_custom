@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 from renault_api.kamereon.exceptions import (
     AccessDeniedException,
+    QuotaLimitException,
     KamereonResponseException,
     NotSupportedException,
 )
@@ -65,23 +66,14 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
         """Fetch the latest data from the source."""
 
         if self._hub.check_throttled():
+            # we have been throttled and decided to cooldown
+            # so do not count this update as an error
+            # coordinator.last_update_success should still be ok
             LOGGER.warning("API throttled: Waiting for next scan")
             return self.data
 
-        wait_seconds = self._hub.get_wait_time_for_next_call()
-        if wait_seconds > 0:
-            # we have called the API too many times, wait before calling again ... or simply wait for the next update, self.data?
-            if (
-                self.update_interval is not None
-                and 2 * wait_seconds > self.update_interval.total_seconds()
-            ):
-                # too many calls ... wait for next scan, do as if data hasn't changed
-                return self.data
-            await asyncio.sleep(2 * wait_seconds)
-
         try:
             async with _PARALLEL_SEMAPHORE:
-                self._hub.add_api_call()
                 data = await self.update_method()
 
         except AccessDeniedException as err:
@@ -92,6 +84,17 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
                 self.access_denied = True
             raise UpdateFailed(f"This endpoint is denied: {err}") from err
 
+        except QuotaLimitException as err:
+            # we got a throttling by the API : the data we got is not bad per see,
+            # we should initiate a cooldown for all coordinators
+            self._hub.got_throttled()
+            if self._has_already_worked:
+                LOGGER.warning("Renault API throttled, reuse latest received data")
+                return self.data
+
+            raise UpdateFailed(f"Renault API throttled: {err}") from err
+
+
         except NotSupportedException as err:
             # Disable because the vehicle does not support this Renault endpoint.
             self.update_interval = None
@@ -100,15 +103,6 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
 
         except KamereonResponseException as err:
             # Other Renault errors.
-            # in case of quotas limits, we should not raise an exception? At minimum be sure of a proper cooldown for the API
-            # Error communicating with API: ('err.func.wired.overloaded', 'You have reached your quota limit')
-            if err.error_code == "err.func.wired.overloaded":
-                # ok we do have a throttling at API level ... we should wait a lot for the next update to be called?
-                self._hub.got_throttled()
-                LOGGER.warning("API throttled")
-                if self._has_already_worked:
-                    return self.data
-
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
         self._has_already_worked = True
