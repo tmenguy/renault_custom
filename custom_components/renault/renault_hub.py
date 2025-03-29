@@ -51,7 +51,32 @@ class RenaultHub:
         self._account: RenaultAccount | None = None
         self._vehicles: dict[str, RenaultVehicleProxy] = {}
 
+        self.rolling_hour: list[
+            float
+        ] = []  # used to store API calls and have a rolling windows of calls
+
         self._got_throttled_at_time: float | None = None
+
+    def add_api_call(self, n: int = 1) -> None:
+        """Add an API call to the rolling window of calls."""
+        current = time()
+        for _ in range(n):
+            self.rolling_hour.append(current)
+
+        while len(self.rolling_hour) > 0 and current - self.rolling_hour[0] > 3600:
+            self.rolling_hour.pop(0)
+
+    def get_current_calls_count_per_hour(self) -> int:
+        """Return the number of calls in the last hour."""
+        return int(len(self.rolling_hour))
+
+    def get_wait_time_for_next_call(self) -> float:
+        """Adjust the rolling buffer of calls."""
+        self.add_api_call(0)
+        if self.get_current_calls_count_per_hour() <= MAX_CALLS_PER_HOURS:
+            return 0.0
+
+        return 3600.0 - (time() - self.rolling_hour[0])
 
     def got_throttled(self) -> None:
         """We got throttled, we need to adjust the rate limit."""
@@ -95,8 +120,10 @@ class RenaultHub:
                     "Failed to retrieve vehicle details from Renault servers"
                 )
 
-            num_call_per_scan = len(COORDINATORS)*len(vehicles.vehicleLinks)
-            scan_interval = timedelta(seconds=(3600 * num_call_per_scan) / MAX_CALLS_PER_HOURS)
+            num_call_per_scan = len(COORDINATORS) * len(vehicles.vehicleLinks)
+            scan_interval = timedelta(
+                seconds=(3600 * num_call_per_scan) / MAX_CALLS_PER_HOURS
+            )
 
             device_registry = dr.async_get(self._hass)
             await asyncio.gather(

@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, TypeVar
 
 from renault_api.kamereon.exceptions import (
     AccessDeniedException,
-    QuotaLimitException,
     KamereonResponseException,
     NotSupportedException,
+    QuotaLimitException,
 )
 from renault_api.kamereon.models import KamereonVehicleDataAttributes
 
@@ -72,8 +72,20 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
             LOGGER.warning("API throttled: Waiting for next scan")
             return self.data
 
+        wait_seconds = self._hub.get_wait_time_for_next_call()
+        if wait_seconds > 0:
+            # we have called the API too many times, wait before calling again ... or simply wait for the next update, self.data?
+            if (
+                self.update_interval is not None
+                and 2 * wait_seconds > self.update_interval.total_seconds()
+            ):
+                # too many calls ... wait for next scan, do as if data hasn't changed
+                return self.data
+            await asyncio.sleep(2 * wait_seconds)
+
         try:
             async with _PARALLEL_SEMAPHORE:
+                self._hub.add_api_call()
                 data = await self.update_method()
 
         except AccessDeniedException as err:
@@ -93,7 +105,6 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
                 return self.data
 
             raise UpdateFailed(f"Renault API throttled: {err}") from err
-
 
         except NotSupportedException as err:
             # Disable because the vehicle does not support this Renault endpoint.

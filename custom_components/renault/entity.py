@@ -61,4 +61,8 @@ class RenaultDataEntity(
         """Return the attribute value from the coordinator data."""
         if not self.coordinator.last_update_success:
             return None
-        return cast(StateType, getattr(self.coordinator.data, key)) if self.coordinator.data is not None else None
+        return (
+            cast(StateType, getattr(self.coordinator.data, key))
+            if self.coordinator.data is not None
+            else None
+        )
