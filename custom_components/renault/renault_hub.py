@@ -78,17 +78,21 @@ class RenaultHub:
 
         return 3600.0 - (time() - self.rolling_hour[0])
 
-    def got_throttled(self) -> None:
+    def set_throttled(self) -> None:
         """We got throttled, we need to adjust the rate limit."""
         if self._got_throttled_at_time is None:
-            self._got_throttled_at_time = time()
+            self._got_throttled_at_time = self._get_now()
 
-    def check_throttled(self) -> bool:
+    def _get_now(self) -> float:
+        """Get the current time."""
+        return time()
+
+    def is_throttled(self) -> bool:
         """Check if we are throttled."""
         if self._got_throttled_at_time is None:
             return False
 
-        if time() - self._got_throttled_at_time > COOLING_UPDATES_SECONDS:
+        if self._get_now() - self._got_throttled_at_time > COOLING_UPDATES_SECONDS:
             self._got_throttled_at_time = None
             return False
 
