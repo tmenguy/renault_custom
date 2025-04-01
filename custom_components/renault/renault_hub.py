@@ -81,18 +81,14 @@ class RenaultHub:
     def set_throttled(self) -> None:
         """We got throttled, we need to adjust the rate limit."""
         if self._got_throttled_at_time is None:
-            self._got_throttled_at_time = self._get_now()
-
-    def _get_now(self) -> float:
-        """Get the current time."""
-        return time()
+            self._got_throttled_at_time = time()
 
     def is_throttled(self) -> bool:
         """Check if we are throttled."""
         if self._got_throttled_at_time is None:
             return False
 
-        if self._get_now() - self._got_throttled_at_time > COOLING_UPDATES_SECONDS:
+        if time() - self._got_throttled_at_time > COOLING_UPDATES_SECONDS:
             self._got_throttled_at_time = None
             return False
 
@@ -114,7 +110,6 @@ class RenaultHub:
 
         self._account = await self._client.get_api_account(account_id)
         vehicles = await self._account.get_vehicles()
-
         if vehicles.vehicleLinks:
             if any(
                 vehicle_link.vehicleDetails is None

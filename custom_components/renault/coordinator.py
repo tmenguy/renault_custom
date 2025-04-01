@@ -62,20 +62,16 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
         self._has_already_worked = False
         self._hub = hub
 
-    async def _call_update_method(self) -> T:
-        """Call the update method and handle exceptions."""
-        return await self.update_method()
-
     async def _async_update_data(self) -> T:
         """Fetch the latest data from the source."""
 
         if self._hub.is_throttled():
+            if not self._has_already_worked:
+                raise UpdateFailed("Renault hub currently throttled: init skipped")
             # we have been throttled and decided to cooldown
             # so do not count this update as an error
             # coordinator. last_update_success should still be ok
-            self.logger.debug(
-                "Renault API throttled: scan skipped and old data returned"
-            )
+            self.logger.debug("Renault hub currently throttled: scan skipped")
             self.assumed_state = True
             return self.data
 
@@ -92,7 +88,7 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
 
         try:
             async with _PARALLEL_SEMAPHORE:
-                data = await self._call_update_method()
+                data = await self.update_method()
 
         except AccessDeniedException as err:
             # This can mean both a temporary error or a permanent error. If it has
