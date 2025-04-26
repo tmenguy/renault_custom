@@ -62,27 +62,23 @@ class RenaultBinarySensor(
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
 
-        data_primary = self._get_data_attr(self.entity_description.on_key)
-        data_secondary = None
-        if self.entity_description.on_secondary_key is not None:
-            data_secondary = self._get_data_attr(self.entity_description.on_secondary_key)
+        result = None
 
-        if data_primary is None and data_secondary is None:
-            return None
-        elif data_primary is not None:
+        if data := self._get_data_attr(self.entity_description.on_key) is not None:
             if isinstance(self.entity_description.on_value, list):
-                result = data_primary in self.entity_description.on_value
+                result = data in self.entity_description.on_value
             else:
-                result = data_primary == self.entity_description.on_value
-        else:
-            if isinstance(self.entity_description.on_secondary_value, list):
-                result = data_secondary in self.entity_description.on_secondary_value
-            else:
-                result = data_secondary == self.entity_description.on_secondary_value
-            # the secondary check is only to be checked if the primary check is None,
-            # and the secondary check is only here to check if there is a is_on
-            if result is False:
-                result = None
+                result = data == self.entity_description.on_value
+        elif self.entity_description.on_secondary_key is not None:
+            if data := self._get_data_attr(self.entity_description.on_secondary_key) is not None:
+                if isinstance(self.entity_description.on_secondary_value, list):
+                    result = data in self.entity_description.on_secondary_value
+                else:
+                    result = data == self.entity_description.on_secondary_value
+                # the secondary check is only to be checked if the primary check is None,
+                # and the secondary check is only here to check if there is a is_on
+                if result is False:
+                    result = None
 
         return result
 
