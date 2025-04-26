@@ -32,6 +32,8 @@ class RenaultBinarySensorEntityDescription(
 
     on_key: str
     on_value: StateType | list[StateType]
+    on_secondary_key: str | None = None
+    on_secondary_value: StateType | list[StateType] | None = None
 
 
 async def async_setup_entry(
@@ -59,12 +61,26 @@ class RenaultBinarySensor(
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        if (data := self._get_data_attr(self.entity_description.on_key)) is None:
-            return None
 
-        if isinstance(self.entity_description.on_value, list):
-            return data in self.entity_description.on_value
-        return data == self.entity_description.on_value
+        data_primary = self._get_data_attr(self.entity_description.on_key)
+        data_secondary = None
+        if self.entity_description.on_secondary_key is not None:
+            data_secondary = self._get_data_attr(self.entity_description.on_secondary_key)
+
+        if data_primary is None and data_secondary is None:
+            return None
+        elif data_primary is not None:
+            if isinstance(self.entity_description.on_value, list):
+                result = data_primary in self.entity_description.on_value
+            else:
+                result = data_primary == self.entity_description.on_value
+        else:
+            if isinstance(self.entity_description.on_secondary_value, list):
+                result = data_secondary in self.entity_description.on_secondary_value
+            else:
+                result = data_secondary == self.entity_description.on_secondary_value
+
+        return result
 
 
 BINARY_SENSOR_TYPES: tuple[RenaultBinarySensorEntityDescription, ...] = tuple(
@@ -74,10 +90,14 @@ BINARY_SENSOR_TYPES: tuple[RenaultBinarySensorEntityDescription, ...] = tuple(
             coordinator="battery",
             device_class=BinarySensorDeviceClass.PLUG,
             on_key="plugStatus",
-            on_value=[
-                PlugState.PLUGGED.value,
-                PlugState.PLUGGED_WAITING_FOR_CHARGE.value,
+            on_value=PlugState.PLUGGED.value,
+            on_secondary_key="chargingStatus",
+            on_secondary_value=[
+                ChargeState.CHARGE_IN_PROGRESS.value,
+                ChargeState.WAITING_FOR_A_PLANNED_CHARGE.value,
+                ChargeState.WAITING_FOR_CURRENT_CHARGE.value,
             ],
+
         ),
         RenaultBinarySensorEntityDescription(
             key="charging",
