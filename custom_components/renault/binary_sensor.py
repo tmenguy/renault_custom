@@ -64,13 +64,13 @@ class RenaultBinarySensor(
 
         result = None
 
-        if data := self._get_data_attr(self.entity_description.on_key) is not None:
+        if (data := self._get_data_attr(self.entity_description.on_key)) is not None:
             if isinstance(self.entity_description.on_value, list):
                 result = data in self.entity_description.on_value
             else:
                 result = data == self.entity_description.on_value
         elif self.entity_description.on_secondary_key is not None:
-            if data := self._get_data_attr(self.entity_description.on_secondary_key) is not None:
+            if (data := self._get_data_attr(self.entity_description.on_secondary_key)) is not None:
                 if isinstance(self.entity_description.on_secondary_value, list):
                     result = data in self.entity_description.on_secondary_value
                 else:
