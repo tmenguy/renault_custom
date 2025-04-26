@@ -96,6 +96,12 @@ BINARY_SENSOR_TYPES: tuple[RenaultBinarySensorEntityDescription, ...] = tuple(
                 ChargeState.CHARGE_IN_PROGRESS.value,
                 ChargeState.WAITING_FOR_A_PLANNED_CHARGE.value,
                 ChargeState.WAITING_FOR_CURRENT_CHARGE.value,
+                ChargeState.CHARGE_ENDED.value,
+                ChargeState.V2G_CHARGING_WAITING.value,
+                ChargeState.V2G_CHARGING_NORMAL.value,
+                ChargeState.V2G_DISCHARGING.value,
+                ChargeState.V2L_CONNECTED.value,
+
             ],
 
         ),
