@@ -79,6 +79,10 @@ class RenaultBinarySensor(
                 result = data_secondary in self.entity_description.on_secondary_value
             else:
                 result = data_secondary == self.entity_description.on_secondary_value
+            # the secondary check is only to be checked if the primary check is None,
+            # and the secondary check is only here to check if there is a is_on
+            if result is False:
+                result = None
 
         return result
 
