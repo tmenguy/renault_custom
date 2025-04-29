@@ -3,7 +3,9 @@
         "abort": {
             "already_configured": "Account is already configured",
             "kamereon_no_account": "Unable to find Kamereon account",
-            "reauth_successful": "Re-authentication was successful"
+            "reauth_successful": "Re-authentication was successful",
+            "reconfigure_successful": "Re-configuration was successful",
+            "unique_id_mismatch": "The selected Kamereon account ID does not match the previous account ID"
         },
         "error": {
             "cannot_connect": "Failed to connect",
@@ -156,7 +158,6 @@
                     "plug_error": "Plug error",
                     "plug_unknown": "Plug unknown",
                     "plugged": "Plugged in",
-                    "plugged_waiting_for_charge": "Plugged in, waiting for charge",
                     "unplugged": "Unplugged"
                 }
             },
@@ -174,6 +175,9 @@
         },
         "no_config_entry_for_device": {
             "message": "No loaded config entry was found for device with ID {device_id}"
+        },
+        "unknown_error": {
+            "message": "An unknown error occurred while communicating with the Renault servers: {error}"
         }
     },
     "services": {

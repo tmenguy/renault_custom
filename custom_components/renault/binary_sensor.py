@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from renault_api.kamereon.enums import ChargeState, PlugState
@@ -30,10 +31,9 @@ class RenaultBinarySensorEntityDescription(
 ):
     """Class describing Renault binary sensor entities."""
 
-    on_key: str
-    on_value: StateType | list[StateType]
-    on_secondary_key: str | None = None
-    on_secondary_value: StateType | list[StateType] | None = None
+    on_key: str | None = None
+    on_value: StateType | None = None
+    value_lambda: Callable[[RenaultBinarySensor], bool | None] | None = None
 
 
 async def async_setup_entry(
@@ -62,25 +62,38 @@ class RenaultBinarySensor(
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
 
-        result = None
+        if self.entity_description.value_lambda is not None:
+            return self.entity_description.value_lambda(self)
+        if self.entity_description.on_key is not None:
+            if (data := self._get_data_attr(self.entity_description.on_key)) is None:
+                return None
 
-        if (data := self._get_data_attr(self.entity_description.on_key)) is not None:
-            if isinstance(self.entity_description.on_value, list):
-                result = data in self.entity_description.on_value
-            else:
-                result = data == self.entity_description.on_value
-        elif self.entity_description.on_secondary_key is not None:
-            if (data := self._get_data_attr(self.entity_description.on_secondary_key)) is not None:
-                if isinstance(self.entity_description.on_secondary_value, list):
-                    result = data in self.entity_description.on_secondary_value
-                else:
-                    result = data == self.entity_description.on_secondary_value
-                # the secondary check is only to be checked if the primary check is None,
-                # and the secondary check is only here to check if there is a is_on
-                if result is False:
-                    result = None
+            return data == self.entity_description.on_value
+        return None
 
-        return result
+
+def _plugged_in_value_lambda(self: RenaultBinarySensor) -> bool | None:
+    """Return true if the vehicle is plugged in."""
+
+    data = self.coordinator.data
+    plug_status = data.get_plug_status() if data else None
+
+    if plug_status is None:
+        charging_status = data.get_charging_status() if data else None
+        if charging_status is not None and charging_status in [
+            ChargeState.CHARGE_IN_PROGRESS,
+            ChargeState.WAITING_FOR_CURRENT_CHARGE,
+            ChargeState.CHARGE_ENDED,
+            ChargeState.V2G_CHARGING_NORMAL,
+            ChargeState.V2G_CHARGING_WAITING,
+            ChargeState.V2G_DISCHARGING,
+            ChargeState.WAITING_FOR_A_PLANNED_CHARGE,
+        ]:
+            return True
+    else:
+        return plug_status == PlugState.PLUGGED
+
+    return None
 
 
 BINARY_SENSOR_TYPES: tuple[RenaultBinarySensorEntityDescription, ...] = tuple(
@@ -89,21 +102,7 @@ BINARY_SENSOR_TYPES: tuple[RenaultBinarySensorEntityDescription, ...] = tuple(
             key="plugged_in",
             coordinator="battery",
             device_class=BinarySensorDeviceClass.PLUG,
-            on_key="plugStatus",
-            on_value=PlugState.PLUGGED.value,
-            on_secondary_key="chargingStatus",
-            on_secondary_value=[
-                ChargeState.CHARGE_IN_PROGRESS.value,
-                ChargeState.WAITING_FOR_A_PLANNED_CHARGE.value,
-                ChargeState.WAITING_FOR_CURRENT_CHARGE.value,
-                ChargeState.CHARGE_ENDED.value,
-                ChargeState.V2G_CHARGING_WAITING.value,
-                ChargeState.V2G_CHARGING_NORMAL.value,
-                ChargeState.V2G_DISCHARGING.value,
-                ChargeState.V2L_CONNECTED.value,
-
-            ],
-
+            value_lambda=_plugged_in_value_lambda,
         ),
         RenaultBinarySensorEntityDescription(
             key="charging",
