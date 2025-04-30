@@ -23,6 +23,16 @@ from .entity import RenaultDataEntity, RenaultDataEntityDescription
 # Coordinator is used to centralize the data updates
 PARALLEL_UPDATES = 0
 
+_PLUG_FROM_CHARGE_STATUS: set[ChargeState] = {
+    ChargeState.CHARGE_IN_PROGRESS,
+    ChargeState.WAITING_FOR_CURRENT_CHARGE,
+    ChargeState.CHARGE_ENDED,
+    ChargeState.V2G_CHARGING_NORMAL,
+    ChargeState.V2G_CHARGING_WAITING,
+    ChargeState.V2G_DISCHARGING,
+    ChargeState.WAITING_FOR_A_PLANNED_CHARGE,
+}
+
 
 @dataclass(frozen=True, kw_only=True)
 class RenaultBinarySensorEntityDescription(
@@ -64,12 +74,12 @@ class RenaultBinarySensor(
 
         if self.entity_description.value_lambda is not None:
             return self.entity_description.value_lambda(self)
-        if self.entity_description.on_key is not None:
-            if (data := self._get_data_attr(self.entity_description.on_key)) is None:
-                return None
+        if self.entity_description.on_key is None:
+            raise NotImplementedError("Either value_lambda or on_key must be set")
+        if (data := self._get_data_attr(self.entity_description.on_key)) is None:
+            return None
 
-            return data == self.entity_description.on_value
-        return None
+        return data == self.entity_description.on_value
 
 
 def _plugged_in_value_lambda(self: RenaultBinarySensor) -> bool | None:
@@ -78,20 +88,12 @@ def _plugged_in_value_lambda(self: RenaultBinarySensor) -> bool | None:
     data = self.coordinator.data
     plug_status = data.get_plug_status() if data else None
 
-    if plug_status is None:
-        charging_status = data.get_charging_status() if data else None
-        if charging_status is not None and charging_status in [
-            ChargeState.CHARGE_IN_PROGRESS,
-            ChargeState.WAITING_FOR_CURRENT_CHARGE,
-            ChargeState.CHARGE_ENDED,
-            ChargeState.V2G_CHARGING_NORMAL,
-            ChargeState.V2G_CHARGING_WAITING,
-            ChargeState.V2G_DISCHARGING,
-            ChargeState.WAITING_FOR_A_PLANNED_CHARGE,
-        ]:
-            return True
-    else:
+    if plug_status is not None:
         return plug_status == PlugState.PLUGGED
+
+    charging_status = data.get_charging_status() if data else None
+    if charging_status is not None and charging_status in _PLUG_FROM_CHARGE_STATUS:
+        return True
 
     return None
 
