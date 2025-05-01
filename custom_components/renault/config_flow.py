@@ -7,8 +7,12 @@ import logging
 from typing import Any
 
 import aiohttp
-from renault_api.const import AVAILABLE_LOCALES
-from renault_api.gigya.exceptions import GigyaException
+try:
+    from .renault_api.const import AVAILABLE_LOCALES
+    from .renault_api.gigya.exceptions import GigyaException
+except Exception:  # pylint: disable=broad-except
+    from renault_api.const import AVAILABLE_LOCALES
+    from renault_api.gigya.exceptions import GigyaException
 import voluptuous as vol
 
 from homeassistant.config_entries import (

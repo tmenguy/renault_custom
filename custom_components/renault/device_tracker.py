@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from renault_api.kamereon.models import KamereonVehicleLocationData
+try:
+    from .renault_api.kamereon.models import KamereonVehicleLocationData
+except Exception:  # pylint: disable=broad-except
+    from renault_api.kamereon.models import KamereonVehicleLocationData
 
 from homeassistant.components.device_tracker import (
     TrackerEntity,

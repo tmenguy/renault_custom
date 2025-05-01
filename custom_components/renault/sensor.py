@@ -2,18 +2,28 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Generic, cast
 
-from renault_api.kamereon.models import (
-    KamereonVehicleBatteryStatusData,
-    KamereonVehicleCockpitData,
-    KamereonVehicleHvacStatusData,
-    KamereonVehicleLocationData,
-    KamereonVehicleResStateData,
-)
+try:
+    from .renault_api.kamereon.models import (
+        KamereonVehicleBatteryStatusData,
+        KamereonVehicleCockpitData,
+        KamereonVehicleHvacStatusData,
+        KamereonVehicleLocationData,
+        KamereonVehicleResStateData,
+    )
+except Exception:  # pylint: disable=broad-except
+    from renault_api.kamereon.models import (
+        KamereonVehicleBatteryStatusData,
+        KamereonVehicleCockpitData,
+        KamereonVehicleHvacStatusData,
+        KamereonVehicleLocationData,
+        KamereonVehicleResStateData,
+    )
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -39,6 +49,9 @@ from . import RenaultConfigEntry
 from .coordinator import T
 from .entity import RenaultDataEntity, RenaultDataEntityDescription
 from .renault_vehicle import RenaultVehicleProxy
+
+
+LOGGER = logging.getLogger(__name__)
 
 # Coordinator is used to centralize the data updates
 PARALLEL_UPDATES = 0
@@ -78,6 +91,7 @@ class RenaultSensor(RenaultDataEntity[T], SensorEntity):
     """Mixin for sensor specific attributes."""
 
     entity_description: RenaultSensorEntityDescription[T]
+    _prev_battery_value_for_test: StateType | None = None
 
     @property
     def data(self) -> StateType:
@@ -92,6 +106,67 @@ class RenaultSensor(RenaultDataEntity[T], SensorEntity):
         if self.entity_description.value_lambda is None:
             return self.data
         return self.entity_description.value_lambda(self)
+
+def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
+    """Return the battery_level of this entity."""
+    data = cast(KamereonVehicleBatteryStatusData, entity.coordinator.data)
+
+    in_error = False
+
+    try:
+        charging_status = data.get_charging_status()
+        if charging_status is None:
+            LOGGER.error("====> BATTERY % FIX: charging_status None")
+            in_error = True
+    except Exception:
+        # Handle the case where charging_status is not available
+        charging_status =  None
+        LOGGER.error("====> BATTERY % FIX: charging_status exception")
+        in_error = True
+
+    try:
+        plug_status = data.get_plug_status()
+        if plug_status is None:
+            LOGGER.error("====> BATTERY % FIX: plug_status None")
+            in_error = True
+    except Exception:
+        # Handle the case where charging_status is not available
+        plug_status =  None
+        LOGGER.error("====> BATTERY % FIX: plug_status exception")
+        in_error = True
+
+    # get the percent value
+    value = entity.data
+    if value is not None:
+        try:
+            value = int(value)
+        except:
+            # Handle the case where value is not a number
+            LOGGER.error(f"====> BATTERY % FIX: value cast exception {value}")
+            in_error = True
+            value = None
+    else:
+        LOGGER.error("====> BATTERY % FIX: value None")
+        in_error = True
+
+
+    if value is not None:
+        if value < 0 or value > 100:
+            LOGGER.error(f"====> BATTERY % FIX: value range error {value}")
+            in_error = True
+        elif entity._prev_battery_value_for_test is not None and value == 100 and entity._prev_battery_value_for_test < 80:
+            LOGGER.error(f"====> BATTERY % FIX: value 100 diff error {value} {entity._prev_battery_value_for_test}")
+            in_error = True
+
+    if in_error:
+        LOGGER.error(f"====> BATTERY % FIX: data {data}")
+        LOGGER.error(f"====> BATTERY % FIX: raw_data {data.raw_data}")
+
+    if value is not None:
+        entity._prev_battery_value_for_test = value
+
+    # for now do as if we were doing nothing to the implementation
+    return entity.data
 
 
 def _get_charging_power(entity: RenaultSensor[T]) -> StateType:
@@ -135,6 +210,7 @@ SENSOR_TYPES: tuple[RenaultSensorEntityDescription[Any], ...] = (
         entity_class=RenaultSensor[KamereonVehicleBatteryStatusData],
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
+        value_lambda=_get_battery_level,
     ),
     RenaultSensorEntityDescription(
         key="charge_state",

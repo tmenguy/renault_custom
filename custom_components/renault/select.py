@@ -5,7 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import cast
 
-from renault_api.kamereon.models import KamereonVehicleBatteryStatusData
+try:
+    from .renault_api.kamereon.models import KamereonVehicleBatteryStatusData
+except Exception:  # pylint: disable=broad-except
+    from renault_api.kamereon.models import KamereonVehicleBatteryStatusData
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.core import HomeAssistant

@@ -1,7 +1,10 @@
 """Support for Renault devices."""
 
 import aiohttp
-from renault_api.gigya.exceptions import GigyaException
+try:
+    from .renault_api.gigya.exceptions import GigyaException
+except Exception:  # pylint: disable=broad-except
+    from renault_api.gigya.exceptions import GigyaException
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME

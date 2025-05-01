@@ -8,13 +8,22 @@ from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING, TypeVar
 
-from renault_api.kamereon.exceptions import (
-    AccessDeniedException,
-    KamereonResponseException,
-    NotSupportedException,
-    QuotaLimitException,
-)
-from renault_api.kamereon.models import KamereonVehicleDataAttributes
+try:
+    from .renault_api.kamereon.exceptions import (
+        AccessDeniedException,
+        KamereonResponseException,
+        NotSupportedException,
+        QuotaLimitException,
+    )
+    from .renault_api.kamereon.models import KamereonVehicleDataAttributes
+except Exception:  # pylint: disable=broad-except
+    from renault_api.kamereon.exceptions import (
+        AccessDeniedException,
+        KamereonResponseException,
+        NotSupportedException,
+        QuotaLimitException,
+    )
+    from renault_api.kamereon.models import KamereonVehicleDataAttributes
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed

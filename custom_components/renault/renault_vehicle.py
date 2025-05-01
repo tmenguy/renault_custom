@@ -10,9 +10,14 @@ from functools import wraps
 import logging
 from typing import TYPE_CHECKING, Any, Concatenate, cast
 
-from renault_api.exceptions import RenaultException
-from renault_api.kamereon import models, schemas
-from renault_api.renault_vehicle import RenaultVehicle
+try:
+    from .renault_api.exceptions import RenaultException
+    from .renault_api.kamereon import models, schemas
+    from .renault_api.renault_vehicle import RenaultVehicle
+except Exception:  # pylint: disable=broad-except
+    from renault_api.exceptions import RenaultException
+    from renault_api.kamereon import models, schemas
+    from renault_api.renault_vehicle import RenaultVehicle
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
