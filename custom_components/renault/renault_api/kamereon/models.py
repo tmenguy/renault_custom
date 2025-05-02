@@ -110,6 +110,14 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, Optional[str]]] = {
         "res-state": None,  # not supported
         "soc-levels": None,  # not supported
     },
+    "X102VE": {  # ZOE phase 2
+        "res-state": None,  # not supported
+        # "lock-status": None,  # seems not supported 404, need to verify
+    },
+    "X071VE": {  # TWINGO III
+        "res-state": None,  # not supported
+        # "lock-status": None,  # seems not supported 404, need to verify
+    },
     "XBG1VE": {  # DACIA SPRING
         "lock-status": None,
         "res-state": None,
