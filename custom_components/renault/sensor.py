@@ -38,7 +38,7 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
     UnitOfTime,
-    UnitOfVolume,
+    UnitOfVolume, ATTR_MODEL_ID,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -109,64 +109,21 @@ class RenaultSensor(RenaultDataEntity[T], SensorEntity):
 
 def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
     """Return the battery_level of this entity."""
-    data = cast(KamereonVehicleBatteryStatusData, entity.coordinator.data)
 
-    in_error = False
+    percent_value = entity.data
 
-    try:
-        charging_status = data.get_charging_status()
-        if charging_status is None:
-            LOGGER.error("====> BATTERY % FIX: charging_status None")
-            in_error = True
-    except Exception:
-        # Handle the case where charging_status is not available
-        charging_status =  None
-        LOGGER.error("====> BATTERY % FIX: charging_status exception")
-        in_error = True
+    if percent_value is not None and percent_value >= 100 and entity.vehicle.device_info.get(ATTR_MODEL_ID, "") == "X071VE":
+        # for the twingo III there is a known issue with the battery level
+        autonomy = entity._get_data_attr("batteryAutonomy")
+        if autonomy is None or autonomy < 180:
+            # if the autonomy is less than180km ... we a 100% vale, we assume that the battery is not full
+            # ex of battery_status with this issue, the renault application shows 100% erroneously too:
+            # {"data":{"id":"VF1AAAAAAAAAAAAAA","attributes":{"timestamp":"2025-05-02T03:16:45Z","batteryLevel":100,"batteryAutonomy":41,"plugStatus":1,"chargingStatus":0.3,"chargingRemainingTime":15}}}
+            LOGGER.warning(f"Twingo III 100% battery level fix automomy: {autonomy}km")
+            percent_value = None
 
-    try:
-        plug_status = data.get_plug_status()
-        if plug_status is None:
-            LOGGER.error("====> BATTERY % FIX: plug_status None")
-            in_error = True
-    except Exception:
-        # Handle the case where charging_status is not available
-        plug_status =  None
-        LOGGER.error("====> BATTERY % FIX: plug_status exception")
-        in_error = True
+    return percent_value
 
-    # get the percent value
-    value = entity.data
-    if value is not None:
-        try:
-            value = int(value)
-        except:
-            # Handle the case where value is not a number
-            LOGGER.error(f"====> BATTERY % FIX: value cast exception {value}")
-            in_error = True
-            value = None
-    else:
-        LOGGER.error("====> BATTERY % FIX: value None")
-        in_error = True
-
-
-    if value is not None:
-        if value < 0 or value > 100:
-            LOGGER.error(f"====> BATTERY % FIX: value range error {value}")
-            in_error = True
-        elif entity._prev_battery_value_for_test is not None and value == 100 and entity._prev_battery_value_for_test < 80:
-            LOGGER.error(f"====> BATTERY % FIX: value 100 diff error {value} {entity._prev_battery_value_for_test}")
-            in_error = True
-
-    if in_error:
-        LOGGER.error(f"====> BATTERY % FIX: data {data}")
-        LOGGER.error(f"====> BATTERY % FIX: raw_data {data.raw_data}")
-
-    if value is not None:
-        entity._prev_battery_value_for_test = value
-
-    # for now do as if we were doing nothing to the implementation
-    return entity.data
 
 
 def _get_charging_power(entity: RenaultSensor[T]) -> StateType:
