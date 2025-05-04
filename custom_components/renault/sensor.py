@@ -127,7 +127,13 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
 
             # from what we can see, the state WAITING_FOR_CURRENT_CHARGE when at 100% indicates an error
             # same for a bad or unknown plug state
-            if charging_status is None or charging_status == ChargeState.WAITING_FOR_CURRENT_CHARGE or plug_status is None:
+            if (
+                charging_status is None
+                or charging_status == ChargeState.WAITING_FOR_CURRENT_CHARGE
+                or charging_status == ChargeState.UNAVAILABLE
+                or plug_status is None
+                or plug_status == PlugState.PLUG_UNKNOWN
+            ):
                 # if the car is not charging, we assume that the battery is not full
                 LOGGER.warning(f"Twingo III 100% battery fix due to charging status {charging_status} or plug_status {plug_status}")
                 percent_value = None
