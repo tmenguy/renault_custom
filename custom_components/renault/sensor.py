@@ -129,7 +129,7 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
             # same for a bad or unknown plug state
             if charging_status is None or charging_status == ChargeState.WAITING_FOR_CURRENT_CHARGE or plug_status is None:
                 # if the car is not charging, we assume that the battery is not full
-                LOGGER.warning(f"Twingo III 100% battery level fix due to charging status {charging_status} or plug_status {plug_status}")
+                LOGGER.warning(f"Twingo III 100% battery fix due to charging status {charging_status} or plug_status {plug_status}")
                 percent_value = None
 
             if percent_value is not None:
@@ -140,7 +140,7 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
                     # and a unique motor and consumption
                     # ex of battery_status with this issue, the renault application shows 100% erroneously too:
                     # {"data":{"id":"VF1AAAAAAAAAAAAAA","attributes":{"timestamp":"2025-05-02T03:16:45Z","batteryLevel":100,"batteryAutonomy":41,"plugStatus":1,"chargingStatus":0.3,"chargingRemainingTime":15}}}
-                    LOGGER.warning(f"Twingo III 100% battery level fix autonomy: {autonomy}km")
+                    LOGGER.warning(f"Twingo III 100% battery fix autonomy: {autonomy}km")
                     percent_value = None
 
             if percent_value is not None and entity._private_data is not None:
@@ -153,7 +153,7 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
                 # maximum charging power of 22kW
                 if charge_power > 22:
                     LOGGER.warning(
-                        f"Twingo III 100% battery level fix prev value: {entity._private_data["last_non_full_battery_value"]}% {(datetime.now() - entity._private_data["last_non_full_battery_value_timestamp"])} ago "
+                        f"Twingo III 100% battery fix prev value: {entity._private_data["last_non_full_battery_value"]}% {(datetime.now() - entity._private_data["last_non_full_battery_value_timestamp"])} ago "
                     )
                     percent_value = None
 
