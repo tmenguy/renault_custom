@@ -150,7 +150,7 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
                 # the twingo has a battery of 22kWh and a maximum charging power of 22kW
                 charge_power = (((percent_value - entity._private_data["last_non_full_battery_value"])/100.0)*(22))/delta_h
 
-                # maximum charging power of 22kW
+                # maximum charging power of 22kW for the twingo
                 if charge_power > 22:
                     LOGGER.warning(
                         f"Twingo III 100% battery fix prev value: {entity._private_data["last_non_full_battery_value"]}% {(datetime.now() - entity._private_data["last_non_full_battery_value_timestamp"])} ago "
