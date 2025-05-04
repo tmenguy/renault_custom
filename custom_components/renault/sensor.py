@@ -94,7 +94,7 @@ class RenaultSensor(RenaultDataEntity[T], SensorEntity):
     """Mixin for sensor specific attributes."""
 
     entity_description: RenaultSensorEntityDescription[T]
-    _prev_battery_value_for_test: StateType | None = None
+    _private_data: dict | None = None
 
     @property
     def data(self) -> StateType:
@@ -115,30 +115,53 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
 
     percent_value = entity.data
 
-    if percent_value is not None and percent_value >= 100 and entity.vehicle.device_info.get(ATTR_MODEL_ID, "") == "X071VE":
-        # for the twingo III there is a known issue with the battery level when at 100% : it can be completely erroneous
-        # in this case we first check if charge_status is defined
+    if percent_value is not None and entity.vehicle.device_info.get(ATTR_MODEL_ID, "") == "X071VE":
 
-        data = cast(KamereonVehicleBatteryStatusData, entity.coordinator.data)
-        charging_status = data.get_charging_status()
-        plug_status = data.get_plug_status()
+        if percent_value >= 100:
+            # for the twingo III there is a known issue with the battery level when at 100% : it can be completely erroneous
+            # in this case we first check if charge_status is defined
 
-        # from what we can see, the state WAITING_FOR_CURRENT_CHARGE when at 100% indicates an error
-        # same for a bad or unknown plug state
-        if charging_status is None or charging_status == ChargeState.WAITING_FOR_CURRENT_CHARGE or plug_status is None:
-            # if the car is not charging, we assume that the battery is not full
-            LOGGER.warning(f"Twingo III 100% battery level fix due to charging status {charging_status} or plug_status {plug_status}")
-            percent_value = None
-        else:
-            autonomy = entity._get_data_attr("batteryAutonomy")
-            if autonomy is None or autonomy < 170:
-                # if the autonomy is less than 170km ... we a 100% vale, we assume that the battery is not full
-                # we can use a direct hard coded constant as the twingo III has a known unique 22kWh battery
-                # and a unique motor and consumption
-                # ex of battery_status with this issue, the renault application shows 100% erroneously too:
-                # {"data":{"id":"VF1AAAAAAAAAAAAAA","attributes":{"timestamp":"2025-05-02T03:16:45Z","batteryLevel":100,"batteryAutonomy":41,"plugStatus":1,"chargingStatus":0.3,"chargingRemainingTime":15}}}
-                LOGGER.warning(f"Twingo III 100% battery level fix autonomy: {autonomy}km")
+            data = cast(KamereonVehicleBatteryStatusData, entity.coordinator.data)
+            charging_status = data.get_charging_status()
+            plug_status = data.get_plug_status()
+
+            # from what we can see, the state WAITING_FOR_CURRENT_CHARGE when at 100% indicates an error
+            # same for a bad or unknown plug state
+            if charging_status is None or charging_status == ChargeState.WAITING_FOR_CURRENT_CHARGE or plug_status is None:
+                # if the car is not charging, we assume that the battery is not full
+                LOGGER.warning(f"Twingo III 100% battery level fix due to charging status {charging_status} or plug_status {plug_status}")
                 percent_value = None
+
+            if percent_value is not None:
+                autonomy = entity._get_data_attr("batteryAutonomy")
+                if autonomy is None or autonomy < 170:
+                    # if the autonomy is less than 170km ... we a 100% vale, we assume that the battery is not full
+                    # we can use a direct hard coded constant as the twingo III has a known unique 22kWh battery
+                    # and a unique motor and consumption
+                    # ex of battery_status with this issue, the renault application shows 100% erroneously too:
+                    # {"data":{"id":"VF1AAAAAAAAAAAAAA","attributes":{"timestamp":"2025-05-02T03:16:45Z","batteryLevel":100,"batteryAutonomy":41,"plugStatus":1,"chargingStatus":0.3,"chargingRemainingTime":15}}}
+                    LOGGER.warning(f"Twingo III 100% battery level fix autonomy: {autonomy}km")
+                    percent_value = None
+
+            if percent_value is not None and entity._private_data is not None:
+                # we will check that the battery couldn't have been charged to 100% in the meantime
+                delta_h = ((datetime.now() - entity._private_data["last_non_full_battery_value_timestamp"]).total_seconds())/3600
+
+                # the twingo has a battery of 22kWh and a maximum charging power of 22kW
+                charge_power = (((percent_value - entity._private_data["last_non_full_battery_value"])/100.0)*(22))/delta_h
+
+                # maximum charging power of 22kW
+                if charge_power > 22:
+                    LOGGER.warning(
+                        f"Twingo III 100% battery level fix prev value: {entity._private_data["last_non_full_battery_value"]}% {(datetime.now() - entity._private_data["last_non_full_battery_value_timestamp"])} ago "
+                    )
+                    percent_value = None
+
+        else:
+            entity._private_data = {
+                "last_non_full_battery_value": percent_value,
+                "last_non_full_battery_value_timestamp": datetime.now(),
+            }
 
     return percent_value
 
