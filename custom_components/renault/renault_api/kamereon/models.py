@@ -98,6 +98,10 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, Optional[str]]] = {
     "R5E1VE": {  # Renault 5 E-TECH
         "charge-schedule": _KCM_ENDPOINTS["charge-schedule"],
     },
+    "X071VE": {  # TWINGO III
+        "res-state": None,  # not supported
+        "lock-status": None,  # seems not supported (404)
+    },
     "X101VE": {  # ZOE phase 1
         "battery-status": _DEFAULT_ENDPOINTS["battery-status"],  # confirmed
         "charge-mode": _DEFAULT_ENDPOINTS["charge-mode"],  # confirmed
@@ -112,11 +116,7 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, Optional[str]]] = {
     },
     "X102VE": {  # ZOE phase 2
         "res-state": None,  # not supported
-        # "lock-status": None,  # seems not supported 404, need to verify
-    },
-    "X071VE": {  # TWINGO III
-        "res-state": None,  # not supported
-        # "lock-status": None,  # seems not supported 404, need to verify
+        "lock-status": None,  # seems not supported (404)
     },
     "XBG1VE": {  # DACIA SPRING
         "lock-status": None,
@@ -466,7 +466,9 @@ class KamereonVehicleBatteryStatusData(KamereonVehicleDataAttributes):
                 else None
             )
         except ValueError:
-            _LOGGER.warning("Unable to convert `%s` to ChargeState.", self.chargingStatus)
+            _LOGGER.warning(
+                "Unable to convert `%s` to ChargeState.", self.chargingStatus
+            )
             return None
 
 
