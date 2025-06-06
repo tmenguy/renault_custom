@@ -4,6 +4,7 @@ from datetime import datetime
 from datetime import timezone
 from typing import Any
 from typing import Optional
+from typing import Union
 from typing import cast
 
 import aiohttp
@@ -96,19 +97,43 @@ class RenaultVehicle:
 
     async def get_full_endpoint(self, endpoint: str) -> str:
         """From VEHICLE_ENDPOINTS / DEFAULT_ENDPOINT."""
+        endpoint_definition = await self.get_endpoint_definition(endpoint)
+        return ACCOUNT_ENDPOINT_ROOT + endpoint_definition.endpoint
+
+    async def get_endpoint_definition(self, endpoint: str) -> models.EndpointDefinition:
+        """From VEHICLE_ENDPOINTS / DEFAULT_ENDPOINT."""
         details = await self.get_details()
         full_endpoint = details.get_endpoint(endpoint)
         if full_endpoint is None:
             raise EndpointNotAvailableError(endpoint, details.get_model_code())
 
-        return ACCOUNT_ENDPOINT_ROOT + full_endpoint
+        return full_endpoint
 
     async def _get_vehicle_data(
-        self, endpoint: str
+        self, endpoint: Union[str, models.EndpointDefinition]
     ) -> models.KamereonVehicleDataResponse:
         """GET to /v{endpoint_version}/cars/{vin}/{endpoint}."""
-        full_endpoint = await self.get_full_endpoint(endpoint)
+        if isinstance(endpoint, models.EndpointDefinition):
+            full_endpoint = ACCOUNT_ENDPOINT_ROOT + endpoint.endpoint
+        else:
+            full_endpoint = await self.get_full_endpoint(endpoint)
         response = await self.http_get(full_endpoint)
+        return cast(
+            models.KamereonVehicleDataResponse,
+            schemas.KamereonVehicleDataResponseSchema.load(response.raw_data),
+        )
+
+    async def _set_vehicle_data(
+        self,
+        endpoint: Union[str, models.EndpointDefinition],
+        json: Optional[dict[str, Any]],
+    ) -> models.KamereonVehicleDataResponse:
+        """GET to /v{endpoint_version}/cars/{vin}/{endpoint}."""
+        if isinstance(endpoint, models.EndpointDefinition):
+            full_endpoint = ACCOUNT_ENDPOINT_ROOT + endpoint.endpoint
+        else:
+            full_endpoint = await self.get_full_endpoint(endpoint)
+        response = await self.http_post(full_endpoint, json)
         return cast(
             models.KamereonVehicleDataResponse,
             schemas.KamereonVehicleDataResponseSchema.load(response.raw_data),
@@ -230,6 +255,14 @@ class RenaultVehicle:
             models.KamereonVehicleResStateData,
             response.get_attributes(schemas.KamereonVehicleResStateDataSchema),
         )
+
+    async def get_charge_schedule(self) -> dict[str, Any]:
+        """Get vehicle charge schedule."""
+        endpoint_definition = await self.get_endpoint_definition("charge-schedule")
+        response = await self._get_vehicle_data(endpoint_definition)
+        if endpoint_definition.mode == "kcm":
+            return response.raw_data
+        return response.raw_data["data"]["attributes"]  # type:ignore[no-any-return]
 
     async def get_notification_settings(
         self,
@@ -369,9 +402,14 @@ class RenaultVehicle:
         self, temperature: float, when: Optional[datetime] = None
     ) -> models.KamereonVehicleHvacStartActionData:
         """Start vehicle ac."""
-        attributes = {
-            "action": "start",
-            "targetTemperature": temperature,
+        json: dict[str, Any] = {
+            "data": {
+                "type": "HvacStart",
+                "attributes": {
+                    "action": "start",
+                    "targetTemperature": temperature,
+                },
+            }
         }
 
         if when:
@@ -381,14 +419,9 @@ class RenaultVehicle:
                     f"not {when.__class__}"
                 )
             start_date_time = when.astimezone(timezone.utc).strftime(PERIOD_TZ_FORMAT)
-            attributes["startDateTime"] = start_date_time
+            json["data"]["attributes"]["startDateTime"] = start_date_time
 
-        response = await self.session.set_vehicle_action(
-            account_id=self.account_id,
-            vin=self.vin,
-            endpoint="actions/hvac-start",
-            attributes=attributes,
-        )
+        response = await self._set_vehicle_data("actions/hvac-start", json)
         return cast(
             models.KamereonVehicleHvacStartActionData,
             response.get_attributes(schemas.KamereonVehicleHvacStartActionDataSchema),
@@ -396,14 +429,16 @@ class RenaultVehicle:
 
     async def set_ac_stop(self) -> models.KamereonVehicleHvacStartActionData:
         """Stop vehicle ac."""
-        attributes = {"action": "cancel"}
+        json: dict[str, Any] = {
+            "data": {
+                "type": "HvacStart",
+                "attributes": {
+                    "action": "cancel",
+                },
+            }
+        }
 
-        response = await self.session.set_vehicle_action(
-            account_id=self.account_id,
-            vin=self.vin,
-            endpoint="actions/hvac-start",
-            attributes=attributes,
-        )
+        response = await self._set_vehicle_data("actions/hvac-stop", json)
         return cast(
             models.KamereonVehicleHvacStartActionData,
             response.get_attributes(schemas.KamereonVehicleHvacStartActionDataSchema),
@@ -419,14 +454,16 @@ class RenaultVehicle:
                     "`schedules` should be a list of HvacSchedule, "
                     f"not {schedules.__class__}"
                 )
-        attributes = {"schedules": [schedule.for_json() for schedule in schedules]}
+        json: dict[str, Any] = {
+            "data": {
+                "type": "HvacSchedule",
+                "attributes": {
+                    "schedules": [schedule.for_json() for schedule in schedules]
+                },
+            }
+        }
 
-        response = await self.session.set_vehicle_action(
-            account_id=self.account_id,
-            vin=self.vin,
-            endpoint="actions/hvac-schedule",
-            attributes=attributes,
-        )
+        response = await self._set_vehicle_data("actions/hvac-set-schedule", json)
         return cast(
             models.KamereonVehicleHvacScheduleActionData,
             response.get_attributes(
@@ -444,14 +481,17 @@ class RenaultVehicle:
                     "`schedules` should be a list of ChargeSchedule, "
                     f"not {schedules.__class__}"
                 )
-        attributes = {"schedules": [schedule.for_json() for schedule in schedules]}
 
-        response = await self.session.set_vehicle_action(
-            account_id=self.account_id,
-            vin=self.vin,
-            endpoint="actions/charge-schedule",
-            attributes=attributes,
-        )
+        json: dict[str, Any] = {
+            "data": {
+                "type": "ChargeSchedule",
+                "attributes": {
+                    "schedules": [schedule.for_json() for schedule in schedules]
+                },
+            }
+        }
+
+        response = await self._set_vehicle_data("actions/charge-set-schedule", json)
         return cast(
             models.KamereonVehicleChargeScheduleActionData,
             response.get_attributes(
@@ -463,14 +503,16 @@ class RenaultVehicle:
         self, charge_mode: str
     ) -> models.KamereonVehicleChargeModeActionData:
         """Set vehicle charge mode."""
-        attributes = {"action": charge_mode}
+        json: dict[str, Any] = {
+            "data": {
+                "type": "ChargeMode",
+                "attributes": {
+                    "action": charge_mode,
+                },
+            }
+        }
 
-        response = await self.session.set_vehicle_action(
-            account_id=self.account_id,
-            vin=self.vin,
-            endpoint="actions/charge-mode",
-            attributes=attributes,
-        )
+        response = await self._set_vehicle_data("actions/charge-set-mode", json)
         return cast(
             models.KamereonVehicleChargeModeActionData,
             response.get_attributes(schemas.KamereonVehicleChargeModeActionDataSchema),
@@ -478,25 +520,27 @@ class RenaultVehicle:
 
     async def set_charge_start(self) -> models.KamereonVehicleChargingStartActionData:
         """Start vehicle charge."""
-        details = await self.get_details()
-
-        if details.controls_action_via_kcm("charge"):
-            attributes = {"action": "resume"}
-            response = await self.session.set_vehicle_action(
-                account_id=self.account_id,
-                vin=self.vin,
-                endpoint="charge/pause-resume",
-                attributes=attributes,
-                adapter_type="kcm",
-            )
+        endpoint_definition = await self.get_endpoint_definition("actions/charge-start")
+        json: dict[str, Any]
+        if endpoint_definition.mode == "kcm":
+            json = {
+                "data": {
+                    "type": "ChargePauseResume",
+                    "attributes": {
+                        "action": "resume",
+                    },
+                }
+            }
         else:
-            attributes = {"action": "start"}
-            response = await self.session.set_vehicle_action(
-                account_id=self.account_id,
-                vin=self.vin,
-                endpoint="actions/charging-start",
-                attributes=attributes,
-            )
+            json = {
+                "data": {
+                    "type": "ChargingStart",
+                    "attributes": {
+                        "action": "start",
+                    },
+                }
+            }
+        response = await self._set_vehicle_data(endpoint_definition, json)
         return cast(
             models.KamereonVehicleChargingStartActionData,
             response.get_attributes(
@@ -506,31 +550,53 @@ class RenaultVehicle:
 
     async def set_charge_stop(self) -> models.KamereonVehicleChargingStartActionData:
         """Start vehicle charge."""
-        details = await self.get_details()
-
-        if details.controls_action_via_kcm("charge"):
-            attributes = {"action": "pause"}
-            response = await self.session.set_vehicle_action(
-                account_id=self.account_id,
-                vin=self.vin,
-                endpoint="charge/pause-resume",
-                attributes=attributes,
-                adapter_type="kcm",
-            )
+        endpoint_definition = await self.get_endpoint_definition("actions/charge-stop")
+        json: dict[str, Any]
+        if endpoint_definition.mode == "kcm":
+            json = {
+                "data": {
+                    "type": "ChargePauseResume",
+                    "attributes": {
+                        "action": "pause",
+                    },
+                }
+            }
         else:
-            attributes = {"action": "stop"}
-            response = await self.session.set_vehicle_action(
-                account_id=self.account_id,
-                vin=self.vin,
-                endpoint="actions/charging-start",
-                attributes=attributes,
-            )
+            json = {
+                "data": {
+                    "type": "ChargingStart",
+                    "attributes": {
+                        "action": "stop",
+                    },
+                }
+            }
+        response = await self._set_vehicle_data(endpoint_definition, json)
         return cast(
             models.KamereonVehicleChargingStartActionData,
             response.get_attributes(
                 schemas.KamereonVehicleChargingStartActionDataSchema
             ),
         )
+
+    async def start_horn(self) -> dict[str, Any]:
+        json: dict[str, Any] = {
+            "data": {
+                "type": "HornLights",
+                "attributes": {"action": "start", "target": "horn"},
+            }
+        }
+        response = await self._set_vehicle_data("actions/horn-start", json)
+        return response.raw_data
+
+    async def start_lights(self) -> dict[str, Any]:
+        json: dict[str, Any] = {
+            "data": {
+                "type": "HornLights",
+                "attributes": {"action": "start", "target": "lights"},
+            }
+        }
+        response = await self._set_vehicle_data("actions/lights-start", json)
+        return response.raw_data
 
     async def supports_endpoint(self, endpoint: str) -> bool:
         """Check if vehicle supports endpoint."""
