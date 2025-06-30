@@ -203,6 +203,15 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
                     else:
                         percent_value = None
 
+                # possible value fix
+                if autonomy is not None and int(entity._private_data.get(("last_non_full_autonomy_value", 500))) == int(autonomy):
+                    # if the autonomy is the same as the last non full autonomy value, we assume that the battery is not full
+                    # this is a fix for the twingo III where the autonomy is not updated when at 100%
+
+                    percent_value = entity._private_data.get("last_non_full_battery_value")
+                    LOGGER.warning(
+                        f"Twingo III 100% battery fix autonomy: {autonomy}km same as last non full autonomy value, return percent_value: {percent_value}% "
+                    )
 
         else:
             entity._private_data["last_non_full_autonomy_value"] = entity._get_data_attr("batteryAutonomy")
