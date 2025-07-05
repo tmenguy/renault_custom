@@ -133,85 +133,90 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
             plug_status = PlugState.PLUG_UNKNOWN
 
         if percent_value >= 100:
-            # for the twingo III there is a known issue with the battery level when at 100% : it can be completely erroneous
-            # in this case we first check if charge_status is defined
 
-            prev_status = entity._private_data.get("last_charging_available_status", ChargeState.UNAVAILABLE)
+            if autonomy is not None and autonomy >= 180:
+                # all good, we are at 100% and the autonomy is ok
+                pass
+            else:
+                # for the twingo III there is a known issue with the battery level when at 100% : it can be completely erroneous
+                # in this case we first check if charge_status is defined
 
-            # if charge eneded by the car ... assume the battery is full so 100% is ok!
-            if charging_status == ChargeState.CHARGE_ENDED or prev_status == ChargeState.CHARGE_ENDED:
-                entity._private_data["had_a_good_100"] = True
-            elif entity._private_data.get("had_a_good_100", False) is False:
+                prev_status = entity._private_data.get("last_charging_available_status", ChargeState.UNAVAILABLE)
 
-                # from what we can see, the state WAITING_FOR_CURRENT_CHARGE when at 100% indicates an error
-                # same for a bad or unknown plug state
-                if (
-                    charging_status == ChargeState.WAITING_FOR_CURRENT_CHARGE
-                    or charging_status == ChargeState.UNAVAILABLE
-                    or plug_status == PlugState.PLUG_UNKNOWN
-                ):
-                    # if the car is not charging, we assume that the battery is not full
-                    LOGGER.warning(f"Twingo III 100% battery fix due to charging status {charging_status} or plug_status {plug_status}")
-                    percent_value = None
+                # if charge eneded by the car ... assume the battery is full so 100% is ok!
+                if charging_status == ChargeState.CHARGE_ENDED or prev_status == ChargeState.CHARGE_ENDED:
+                    entity._private_data["had_a_good_100"] = True
+                elif entity._private_data.get("had_a_good_100", False) is False:
 
-
-                if percent_value is not None and entity._private_data.get("last_non_full_battery_value_timestamp") is not None:
-                    # we will check that the battery couldn't have been charged to 100% in the meantime
-                    delta_h = ((datetime.now() - entity._private_data["last_non_full_battery_value_timestamp"]).total_seconds())/3600
-
-                    # the twingo has a battery of 22kWh and a maximum charging power of 22kW
-                    charge_power = (((percent_value - entity._private_data["last_non_full_battery_value"])/100.0)*(22))/delta_h
-
-                    # maximum charging power of 22kW for the twingo
-                    if charge_power > 22:
-                        LOGGER.warning(
-                            f"Twingo III 100% battery fix prev value: {entity._private_data["last_non_full_battery_value"]}% {(datetime.now() - entity._private_data["last_non_full_battery_value_timestamp"])} ago "
-                        )
+                    # from what we can see, the state WAITING_FOR_CURRENT_CHARGE when at 100% indicates an error
+                    # same for a bad or unknown plug state
+                    if (
+                        charging_status == ChargeState.WAITING_FOR_CURRENT_CHARGE
+                        or charging_status == ChargeState.UNAVAILABLE
+                        or plug_status == PlugState.PLUG_UNKNOWN
+                    ):
+                        # if the car is not charging, we assume that the battery is not full
+                        LOGGER.warning(f"Twingo III 100% battery fix due to charging status {charging_status} or plug_status {plug_status}")
                         percent_value = None
 
 
-                if percent_value is not None and entity._private_data.get("prev_value") is not None:
-                    if entity._private_data.get("prev_value") < 100:
-                        # ok we where not at 100% before, we are now : it is a transition ... but shouldn't be if not charging!
-                        if prev_status != ChargeState.CHARGE_IN_PROGRESS and charging_status != ChargeState.CHARGE_IN_PROGRESS:
-                            # we are not charging and we are at 100% : this is a bad transition
-                            # we will set the value to None
+                    if percent_value is not None and entity._private_data.get("last_non_full_battery_value_timestamp") is not None:
+                        # we will check that the battery couldn't have been charged to 100% in the meantime
+                        delta_h = ((datetime.now() - entity._private_data["last_non_full_battery_value_timestamp"]).total_seconds())/3600
+
+                        # the twingo has a battery of 22kWh and a maximum charging power of 22kW
+                        charge_power = (((percent_value - entity._private_data["last_non_full_battery_value"])/100.0)*(22))/delta_h
+
+                        # maximum charging power of 22kW for the twingo
+                        if charge_power > 22:
                             LOGGER.warning(
-                                f"Twingo III 100% battery fix not charging transition: {prev_status} {charging_status} % "
+                                f"Twingo III 100% battery fix prev value: {entity._private_data["last_non_full_battery_value"]}% {(datetime.now() - entity._private_data["last_non_full_battery_value_timestamp"])} ago "
                             )
                             percent_value = None
 
-                if percent_value is not None:
-                    if autonomy is None or autonomy < 175:
-                        # if the autonomy is less than 175km ... we a 100% vale, we assume that the battery is not full
-                        # we can use a direct hard coded constant as the twingo III has a known unique 22kWh battery
-                        # and a unique motor and consumption
-                        # ex of battery_status with this issue, the renault application shows 100% erroneously too:
-                        # {"data":{"id":"VF1AAAAAAAAAAAAAA","attributes":{"timestamp":"2025-05-02T03:16:45Z","batteryLevel":100,"batteryAutonomy":41,"plugStatus":1,"chargingStatus":0.3,"chargingRemainingTime":15}}}
-                        LOGGER.warning(f"Twingo III 100% battery fix autonomy: {autonomy}km")
-                        percent_value = None
 
-                if prev_status == ChargeState.CHARGE_IN_PROGRESS or charging_status == ChargeState.CHARGE_IN_PROGRESS:
-                    entity._private_data["had_a_charge_during_100_period"] = True
+                    if percent_value is not None and entity._private_data.get("prev_value") is not None:
+                        if entity._private_data.get("prev_value") < 100:
+                            # ok we where not at 100% before, we are now : it is a transition ... but shouldn't be if not charging!
+                            if prev_status != ChargeState.CHARGE_IN_PROGRESS and charging_status != ChargeState.CHARGE_IN_PROGRESS:
+                                # we are not charging and we are at 100% : this is a bad transition
+                                # we will set the value to None
+                                LOGGER.warning(
+                                    f"Twingo III 100% battery fix not charging transition: {prev_status} {charging_status} % "
+                                )
+                                percent_value = None
 
-                if percent_value is None:
-                    entity._private_data["had_abnormal_transition_100"] = True
-                elif entity._private_data.get("had_abnormal_transition_100", False) is True:
-                    if entity._private_data.get("had_a_charge_during_100_period", False) is True:
-                        # so 100 is possible ...even if it was not before
-                        pass
-                    else:
-                        percent_value = None
+                    if percent_value is not None:
+                        if autonomy is None or autonomy < 175:
+                            # if the autonomy is less than 175km ... we a 100% vale, we assume that the battery is not full
+                            # we can use a direct hard coded constant as the twingo III has a known unique 22kWh battery
+                            # and a unique motor and consumption
+                            # ex of battery_status with this issue, the renault application shows 100% erroneously too:
+                            # {"data":{"id":"VF1AAAAAAAAAAAAAA","attributes":{"timestamp":"2025-05-02T03:16:45Z","batteryLevel":100,"batteryAutonomy":41,"plugStatus":1,"chargingStatus":0.3,"chargingRemainingTime":15}}}
+                            LOGGER.warning(f"Twingo III 100% battery fix autonomy: {autonomy}km")
+                            percent_value = None
 
-                # possible value fix
-                if autonomy is not None and int(entity._private_data.get("last_non_full_autonomy_value", 500)) == int(autonomy):
-                    # if the autonomy is the same as the last non full autonomy value, we assume that the battery is not full
-                    # this is a fix for the twingo III where the autonomy is not updated when at 100%
+                    if prev_status == ChargeState.CHARGE_IN_PROGRESS or charging_status == ChargeState.CHARGE_IN_PROGRESS:
+                        entity._private_data["had_a_charge_during_100_period"] = True
 
-                    percent_value = entity._private_data.get("last_non_full_battery_value")
-                    LOGGER.warning(
-                        f"Twingo III 100% battery fix autonomy: {autonomy}km same as last non full autonomy value, return percent_value: {percent_value}% "
-                    )
+                    if percent_value is None:
+                        entity._private_data["had_abnormal_transition_100"] = True
+                    elif entity._private_data.get("had_abnormal_transition_100", False) is True:
+                        if entity._private_data.get("had_a_charge_during_100_period", False) is True:
+                            # so 100 is possible ...even if it was not before
+                            pass
+                        else:
+                            percent_value = None
+
+                    # possible value fix
+                    if autonomy is not None and int(entity._private_data.get("last_non_full_autonomy_value", 500)) == int(autonomy):
+                        # if the autonomy is the same as the last non full autonomy value, we assume that the battery is not full
+                        # this is a fix for the twingo III where the autonomy is not updated when at 100%
+
+                        percent_value = entity._private_data.get("last_non_full_battery_value")
+                        LOGGER.warning(
+                            f"Twingo III 100% battery fix autonomy: {autonomy}km same as last non full autonomy value, return percent_value: {percent_value}% "
+                        )
 
         else:
             entity._private_data["last_non_full_autonomy_value"] = entity._get_data_attr("batteryAutonomy")
