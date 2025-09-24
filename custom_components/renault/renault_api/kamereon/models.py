@@ -205,7 +205,16 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, Optional[EndpointDefinition]]] = {
         "res-state": None,
     },
     "XCB1VE": {  # MEGANE E-TECH
+        "battery-status": _DEFAULT_ENDPOINTS["battery-status"],
+        "charge-mode": None,
+        "charge-schedule": _KCM_ENDPOINTS["charge-schedule"],
+        "cockpit": _DEFAULT_ENDPOINTS["cockpit"],
+        "hvac-settings": _DEFAULT_ENDPOINTS["hvac-settings"],
+        "hvac-status": _DEFAULT_ENDPOINTS["hvac-status"],
+        "location": _DEFAULT_ENDPOINTS["location"],
         "lock-status": None,
+        "pressure": None,  # Reason: 404
+        "res-state": None,
     },
     "XHN1SU": {  # AUSTRAL
         "cockpit": _DEFAULT_ENDPOINTS["cockpit"],  # confirmed
@@ -241,7 +250,7 @@ def get_model_endpoints(
             _ALREADY_WARNED_VEHICLE.add(model_code)
             _LOGGER.warning(
                 "Model %s is not documented, using default endpoints."
-                " Please open an issue at https://github.com/hacf-fr/renault-api",
+                " Please help to document it at https://github.com/hacf-fr/renault-api",
                 model_code,
             )
         return _DEFAULT_ENDPOINTS
@@ -262,7 +271,7 @@ def get_model_endpoint(
             _ALREADY_WARNED_VEHICLE_ENDPOINT.add(key)
             _LOGGER.warning(
                 "Endpoint %s for model %s is not documented, using default endpoints."
-                " Please open an issue at https://github.com/hacf-fr/renault-api",
+                " Please help to document it at https://github.com/hacf-fr/renault-api",
                 endpoint,
                 model_code,
             )
