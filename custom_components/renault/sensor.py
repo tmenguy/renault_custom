@@ -124,6 +124,8 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
         data = cast(KamereonVehicleBatteryStatusData, entity.coordinator.data)
         charging_status = data.get_charging_status()
         plug_status = data.get_plug_status()
+        plug_status_native = data.plugStatus
+
         autonomy = entity._get_data_attr("batteryAutonomy")
 
         if charging_status is None:
@@ -131,6 +133,10 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
 
         if plug_status is None:
             plug_status = PlugState.PLUG_UNKNOWN
+
+        # correct here the "plug state 3" issue
+        if plug_status_native is not None and plug_status_native == 3:
+            plug_status = PlugState.PLUGGED
 
         if percent_value >= 100:
 
@@ -143,7 +149,7 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
 
                 prev_status = entity._private_data.get("last_charging_available_status", ChargeState.UNAVAILABLE)
 
-                # if charge eneded by the car ... assume the battery is full so 100% is ok!
+                # if charge ended by the car ... assume the battery is full so 100% is ok!
                 if charging_status == ChargeState.CHARGE_ENDED or prev_status == ChargeState.CHARGE_ENDED:
                     entity._private_data["had_a_good_100"] = True
                 elif entity._private_data.get("had_a_good_100", False) is False:
@@ -187,8 +193,8 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
                                 percent_value = None
 
                     if percent_value is not None:
-                        if autonomy is None or autonomy < 175:
-                            # if the autonomy is less than 175km ... we a 100% vale, we assume that the battery is not full
+                        if autonomy is None or autonomy < 160:
+                            # if the autonomy is less than 175km ... we are 100% value, we assume that the battery is not full
                             # we can use a direct hard coded constant as the twingo III has a known unique 22kWh battery
                             # and a unique motor and consumption
                             # ex of battery_status with this issue, the renault application shows 100% erroneously too:
