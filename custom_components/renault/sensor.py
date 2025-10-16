@@ -15,6 +15,7 @@ try:
         KamereonVehicleHvacStatusData,
         KamereonVehicleLocationData,
         KamereonVehicleResStateData,
+        KamereonVehicleTyrePressureData,
     )
     from .renault_api.kamereon.enums import ChargeState, PlugState
 except Exception:  # pylint: disable=broad-except
@@ -24,6 +25,7 @@ except Exception:  # pylint: disable=broad-except
         KamereonVehicleHvacStatusData,
         KamereonVehicleLocationData,
         KamereonVehicleResStateData,
+        KamereonVehicleTyrePressureData,
     )
     from renault_api.kamereon.enums import ChargeState, PlugState
 
@@ -38,6 +40,7 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfLength,
     UnitOfPower,
+    UnitOfPressure,
     UnitOfTemperature,
     UnitOfTime,
     UnitOfVolume,
@@ -485,5 +488,45 @@ SENSOR_TYPES: tuple[RenaultSensorEntityDescription[Any], ...] = (
         entity_class=RenaultSensor[KamereonVehicleResStateData],
         entity_registry_enabled_default=False,
         translation_key="res_state_code",
+    ),
+    RenaultSensorEntityDescription(
+        key="front_left_pressure",
+        coordinator="pressure",
+        data_key="flPressure",
+        device_class=SensorDeviceClass.PRESSURE,
+        entity_class=RenaultSensor[KamereonVehicleTyrePressureData],
+        native_unit_of_measurement=UnitOfPressure.MBAR,
+        state_class=SensorStateClass.MEASUREMENT,
+        translation_key="front_left_pressure",
+    ),
+    RenaultSensorEntityDescription(
+        key="front_right_pressure",
+        coordinator="pressure",
+        data_key="frPressure",
+        device_class=SensorDeviceClass.PRESSURE,
+        entity_class=RenaultSensor[KamereonVehicleTyrePressureData],
+        native_unit_of_measurement=UnitOfPressure.MBAR,
+        state_class=SensorStateClass.MEASUREMENT,
+        translation_key="front_right_pressure",
+    ),
+    RenaultSensorEntityDescription(
+        key="rear_left_pressure",
+        coordinator="pressure",
+        data_key="rlPressure",
+        device_class=SensorDeviceClass.PRESSURE,
+        entity_class=RenaultSensor[KamereonVehicleTyrePressureData],
+        native_unit_of_measurement=UnitOfPressure.MBAR,
+        state_class=SensorStateClass.MEASUREMENT,
+        translation_key="rear_left_pressure",
+    ),
+    RenaultSensorEntityDescription(
+        key="rear_right_pressure",
+        coordinator="pressure",
+        data_key="rrPressure",
+        device_class=SensorDeviceClass.PRESSURE,
+        entity_class=RenaultSensor[KamereonVehicleTyrePressureData],
+        native_unit_of_measurement=UnitOfPressure.MBAR,
+        state_class=SensorStateClass.MEASUREMENT,
+        translation_key="rear_right_pressure",
     ),
 )

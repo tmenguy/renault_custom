@@ -131,6 +131,12 @@
             "charging_remaining_time": {
                 "name": "Charging remaining time"
             },
+            "front_left_pressure": {
+                "name": "Front left tyre pressure"
+            },
+            "front_right_pressure": {
+                "name": "Front right tyre pressure"
+            },
             "fuel_autonomy": {
                 "name": "Fuel autonomy"
             },
@@ -160,6 +166,12 @@
                     "plugged": "Plugged in",
                     "unplugged": "Unplugged"
                 }
+            },
+            "rear_left_pressure": {
+                "name": "Rear left tyre pressure"
+            },
+            "rear_right_pressure": {
+                "name": "Rear right tyre pressure"
             },
             "res_state": {
                 "name": "Remote engine start"

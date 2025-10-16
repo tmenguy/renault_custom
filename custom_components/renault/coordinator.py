@@ -84,17 +84,6 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
             self.assumed_state = True
             return self.data
 
-        wait_seconds = self._hub.get_wait_time_for_next_call()
-        if wait_seconds > 0:
-            # we have called the API too many times, wait before calling again ... or simply wait for the next update, self.data?
-            if (
-                self.update_interval is not None
-                and 2 * wait_seconds > self.update_interval.total_seconds()
-            ):
-                # too many calls ... wait for next scan, do as if data hasn't changed
-                return self.data
-            await asyncio.sleep(2 * wait_seconds)
-
         try:
             async with _PARALLEL_SEMAPHORE:
                 data = await self.update_method()
