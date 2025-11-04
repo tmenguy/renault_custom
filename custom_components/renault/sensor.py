@@ -44,7 +44,7 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
     UnitOfVolume,
-    ATTR_MODEL_ID, STATE_UNAVAILABLE,
+    ATTR_MODEL_ID,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
