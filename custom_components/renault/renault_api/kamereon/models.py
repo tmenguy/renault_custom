@@ -147,6 +147,52 @@ _KCM_ENDPOINTS: dict[str, EndpointDefinition] = {
 }
 
 _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
+    "A5E1AE": {  # Alpine A290
+        "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
+        "actions/hvac-start": _DEFAULT_ENDPOINTS["actions/hvac-start"],
+        "actions/hvac-stop": _DEFAULT_ENDPOINTS["actions/hvac-stop"],
+        "actions/lights-start": _DEFAULT_ENDPOINTS["actions/lights-start"],
+        "battery-status": _DEFAULT_ENDPOINTS["battery-status"],
+        "charge-history": None,  # Reason: "you should not be there..."
+        "charge-mode": None,  # Reason: The access is forbidden
+        "charge-schedule": _KCM_ENDPOINTS["charge-schedule"],
+        "charges": _DEFAULT_ENDPOINTS["charges"],
+        "cockpit": _DEFAULT_ENDPOINTS["cockpit"],
+        "hvac-settings": _DEFAULT_ENDPOINTS["hvac-settings"],
+        "hvac-status": _DEFAULT_ENDPOINTS["hvac-status"],
+        "location": _DEFAULT_ENDPOINTS["location"],
+        "lock-status": None,  # Reason: 404
+        "pressure": None,  # Reason: 404
+        "res-state": None,  # Reason: The access is forbidden
+        "soc-levels": _DEFAULT_ENDPOINTS["soc-levels"],
+        "actions/charge-start": None,  # Reason: The access is forbidden,
+        "actions/charge-stop": None,  # Reason: The access is forbidden,
+    },
+    "DU31SU": {  # Dacia Duster III
+        "actions/horn-start": None,  # err.func.wired.forbidden
+        "actions/lights-start": None,  # err.func.wired.forbidden
+        "battery-status": None,  # err.func.wired.notFound
+        "charge-mode": None,  # err.func.wired.forbidden
+        "charge-history": None,  # err.func.wired.not-found
+        "charge-schedule": None,  # err.func.wired.forbidden
+        "charges": None,  # err.func.wired.notFound: Not Found
+        "charging-settings": None,  # err.func.wired.forbidden
+        "charging-start": None,  # err.func.wired.forbidden
+        "cockpit": _DEFAULT_ENDPOINTS["cockpit"],
+        "horn-lights": None,  # err.func.wired.forbidden
+        "hvac-history": None,  # err.func.wired.not-found
+        "hvac-schedule": None,  # err.func.wired.not-found
+        "hvac-sessions": None,  # err.func.wired.not-found
+        "hvac-settings": None,  # err.func.wired.forbidden
+        "hvac-start": None,  # err.func.wired.forbidden
+        "hvac-status": None,  # err.func.wired.notFound
+        "location": _DEFAULT_ENDPOINTS["location"],
+        "lock-status": None,  # err.func.wired.notFound
+        "pause-resume": None,  # err.func.wired.not-found
+        "pressure": None,  # err.func.wired.notFound
+        "res-state": None,  # err.func.wired.notFound
+        "soc-levels": None,  # err.func.wired.forbidden
+    },
     "R5E1VE": {  # Renault 5 E-TECH
         "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
         "actions/hvac-start": _DEFAULT_ENDPOINTS["actions/hvac-start"],
@@ -186,6 +232,9 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
         "actions/hvac-start": _DEFAULT_ENDPOINTS["actions/hvac-start"],
         "actions/hvac-stop": _DEFAULT_ENDPOINTS["actions/hvac-stop"],
         "actions/charge-start": _DEFAULT_ENDPOINTS["actions/charge-start"],
+        "actions/charge-set-schedule": _DEFAULT_ENDPOINTS[
+            "actions/charge-set-schedule"
+        ],
         "battery-status": _DEFAULT_ENDPOINTS["battery-status"],  # confirmed
         "charge-mode": _DEFAULT_ENDPOINTS["charge-mode"],  # confirmed
         "charge-schedule": _DEFAULT_ENDPOINTS["charge-schedule"],  # confirmed
@@ -315,6 +364,31 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
     "XJA1VP": {  # CLIO V
         "hvac-status": None,
     },
+    "XJA2VP": {  # CLIO V
+        "alerts": None,  # err.func.wired.not-found
+        "battery-status": None,  # err.func.wired.notFound
+        "charge-mode": None,  # err.func.wired.forbidden
+        "charge-history": None,  # err.func.wired.not-found
+        "charge-schedule": None,  # err.func.wired.forbidden
+        "charges": None,  # err.func.wired.notFound: Not Found
+        "charging-settings": None,  # err.func.wired.forbidden
+        "charging-start": None,  # err.func.wired.forbidden
+        "cockpit": _DEFAULT_ENDPOINTS["cockpit"],
+        "horn-lights": None,  # err.func.wired.forbidden
+        "hvac-history": None,  # err.func.wired.not-found
+        "hvac-schedule": None,  # err.func.wired.not-found
+        "hvac-sessions": None,  # err.func.wired.not-found
+        "hvac-settings": None,  # err.func.wired.forbidden
+        "hvac-start": None,  # err.func.wired.forbidden
+        "hvac-status": None,  # err.func.wired.notFound
+        "location": _DEFAULT_ENDPOINTS["location"],
+        "lock-status": None,  # err.func.wired.notFound
+        "notification-settings": None,  # err.func.vcps.users-helper.get-notification-settings.error  # noqa: E501
+        "pause-resume": None,  # err.func.wired.not-found
+        "pressure": None,  # err.func.wired.notFound
+        "res-state": None,  # err.func.wired.notFound
+        "soc-levels": None,  # err.func.wired.forbidden
+    },
     "XJB2CP": {  # Renault Symbioz 2025
         "cockpit": _DEFAULT_ENDPOINTS["cockpit"],  # confirmed
         "hvac-status": None,
@@ -338,6 +412,23 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
         "notification-settings": None,  # Reason: "err.func.vcps.users-helper.get-notification-settings.error"  # noqa: E501
         "pressure": None,  # Reason: "err.func.wired.notFound"
         "res-state": None,  # Reason: "err.func.wired.notFound"
+    },
+    "XJL2TR": {  # Arkana E-tech full hybrid
+        "cockpit": _DEFAULT_ENDPOINTS["cockpit"],  # confirmed
+        "charge-history": None,  # Reason: "err.func.wired.not-found"
+        "charge-mode": None,  # Reason: "err.func.wired.forbidden"
+        "charge-schedule": None,  # Reason: "err.func.wired.forbidden"
+        "charging-settings": None,  # Reason: "err.func.wired.forbidden"
+        "hvac-status": None,  # Reason: "err.func.wired.notFound"
+        "hvac-history": None,  # Reason: "err.func.wired.not-found"
+        "hvac-settings": None,  # Reason: "err.func.wired.not-found"
+        "hvac-sessions": None,  # Reason: "err.func.wired.not-found"
+        "hvac-start": None,  # Reason: "Request method 'GET' is not supported"
+        "hvac-schedule": None,  # Reason: "Request method 'GET' is not supported"
+        "location": _DEFAULT_ENDPOINTS["location"],
+        "lock-status": None,  # Reason: "err.func.wired.notFound"
+        "res-state": None,  # Reason: "err.func.wired.notFound"
+        "pressure": None,  # Reason: "err.func.wired.notFound"
     },
 }
 
