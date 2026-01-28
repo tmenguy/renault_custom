@@ -48,6 +48,10 @@ COMMON_ERRRORS: list[dict[str, Any]] = [
         "error_type": exceptions.QuotaLimitException,
     },
     {
+        "errorCode": "err.func.privacy.on",
+        "error_type": exceptions.PrivacyModeOnException,
+    },
+    {
         "errorCode": "err.func.wired.forbidden",
         "error_type": exceptions.ForbiddenException,
     },
@@ -134,9 +138,17 @@ _DEFAULT_ENDPOINTS: dict[str, EndpointDefinition] = {
     "res-state": EndpointDefinition("/kca/car-adapter/v1/cars/{vin}/res-state"),
     "soc-levels": EndpointDefinition("/kcm/v1/vehicles/{vin}/ev/soc-levels"),
 }
+_KCA_ALTERNATIVE_ENDPOINTS: dict[str, EndpointDefinition] = {
+    "actions/hvac-stop": EndpointDefinition(
+        "/kca/car-adapter/v1/cars/{vin}/actions/hvac-start", mode="kca-stop"
+    ),
+}
 _KCM_ENDPOINTS: dict[str, EndpointDefinition] = {
     "actions/charge-start": EndpointDefinition(
         "/kcm/v1/vehicles/{vin}/charge/pause-resume", mode="kcm"
+    ),
+    "actions/charge-start-via-settings": EndpointDefinition(
+        "/kcm/v1/vehicles/{vin}/ev/settings", mode="kcm-settings"
     ),
     "actions/charge-stop": EndpointDefinition(
         "/kcm/v1/vehicles/{vin}/charge/pause-resume", mode="kcm"
@@ -148,9 +160,11 @@ _KCM_ENDPOINTS: dict[str, EndpointDefinition] = {
 
 _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
     "A5E1AE": {  # Alpine A290
+        "actions/charge-start": None,  # Reason: The access is forbidden,
+        "actions/charge-stop": None,  # Reason: The access is forbidden,
         "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
         "actions/hvac-start": _DEFAULT_ENDPOINTS["actions/hvac-start"],
-        "actions/hvac-stop": _DEFAULT_ENDPOINTS["actions/hvac-stop"],
+        "actions/hvac-stop": _KCA_ALTERNATIVE_ENDPOINTS["actions/hvac-stop"],
         "actions/lights-start": _DEFAULT_ENDPOINTS["actions/lights-start"],
         "battery-status": _DEFAULT_ENDPOINTS["battery-status"],
         "charge-history": None,  # Reason: "you should not be there..."
@@ -165,8 +179,6 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
         "pressure": None,  # Reason: 404
         "res-state": None,  # Reason: The access is forbidden
         "soc-levels": _DEFAULT_ENDPOINTS["soc-levels"],
-        "actions/charge-start": None,  # Reason: The access is forbidden,
-        "actions/charge-stop": None,  # Reason: The access is forbidden,
     },
     "DU31SU": {  # Dacia Duster III
         "actions/horn-start": None,  # err.func.wired.forbidden
@@ -194,6 +206,8 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
         "soc-levels": None,  # err.func.wired.forbidden
     },
     "R5E1VE": {  # Renault 5 E-TECH
+        "actions/charge-start": _KCM_ENDPOINTS["actions/charge-start-via-settings"],
+        "actions/charge-stop": None,  # Not supported - use charger to stop
         "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
         "actions/hvac-start": _DEFAULT_ENDPOINTS["actions/hvac-start"],
         "actions/lights-start": _DEFAULT_ENDPOINTS["actions/lights-start"],
@@ -330,6 +344,26 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
         "pressure": None,  # Reason: "err.func.wired.notFound"
         "res-state": None,  # Reason: "err.func.wired.notFound"
     },
+    "XHN1CP": {  # Rafale
+        "actions/charge-start": None,  # err.func.wired.forbidden
+        "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
+        "actions/lights-start": _DEFAULT_ENDPOINTS["actions/lights-start"],
+        "battery-status": _DEFAULT_ENDPOINTS["battery-status"],
+        "charge-history": None,  # Reason: "err.func.wired.not-found"
+        "charge-mode": None,  # Reason: "err.func.wired.forbidden"
+        "charge-schedule": _KCM_ENDPOINTS["charge-schedule"],
+        "charging-settings": None,  # Reason: "err.func.wired.forbidden"
+        "cockpit": _DEFAULT_ENDPOINTS["cockpit"],
+        "hvac-history": None,  # Reason: "err.func.wired.not-found"
+        "hvac-sessions": None,  # Reason: "err.func.wired.not-found"
+        "hvac-settings": _DEFAULT_ENDPOINTS["hvac-settings"],
+        "hvac-status": _DEFAULT_ENDPOINTS["hvac-status"],
+        "location": _DEFAULT_ENDPOINTS["location"],
+        "lock-status": None,  # Reason: "err.func.wired.notFound"
+        "notification-settings": None,  # Reason: "err.func.vcps.users-helper.get-notification-settings.error"  # noqa: E501
+        "pressure": None,  # Reason: "err.func.wired.notFound"
+        "res-state": None,  # Reason: "err.func.wired.notFound"
+    },
     "XHN1SU": {  # AUSTRAL
         "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
         "actions/lights-start": _DEFAULT_ENDPOINTS["actions/lights-start"],
@@ -394,6 +428,8 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
         "soc-levels": None,  # err.func.wired.forbidden
     },
     "XJB2CP": {  # Renault Symbioz 2025
+        "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
+        "actions/lights-start": _DEFAULT_ENDPOINTS["actions/lights-start"],
         "cockpit": _DEFAULT_ENDPOINTS["cockpit"],  # confirmed
         "hvac-status": None,
         "location": _DEFAULT_ENDPOINTS["location"],
@@ -1134,3 +1170,8 @@ class KamereonVehicleHvacModeActionData(KamereonVehicleDataAttributes):
 @dataclass
 class KamereonVehicleChargingStartActionData(KamereonVehicleDataAttributes):
     """Kamereon vehicle action data charging-start attributes."""
+
+
+@dataclass
+class KamereonVehicleBatterySocActionData(KamereonVehicleDataAttributes):
+    """Kamereon vehicle action data soc attributes."""

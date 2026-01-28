@@ -444,10 +444,30 @@ class RenaultVehicle:
             }
         }
 
-        response = await self._set_vehicle_data("actions/hvac-stop", json)
+        # For some vehicles (eg A5E1AE), hvac is stopped with "stop" instead of "cancel"
+        # so we override the action. It could be that this is the case for all vehicles,
+        # but we have no way to test that.
+        endpoint_definition = await self.get_endpoint_definition("actions/hvac-stop")
+        if endpoint_definition.mode == "kca-stop":
+            # Using alternative endpoint that requires "stop" action
+            json["data"]["attributes"]["action"] = "stop"
+
+        response = await self._set_vehicle_data(endpoint_definition, json)
         return cast(
             models.KamereonVehicleHvacStartActionData,
             response.get_attributes(schemas.KamereonVehicleHvacStartActionDataSchema),
+        )
+
+    async def set_battery_soc(
+        self, *, min: int, target: int
+    ) -> models.KamereonVehicleBatterySocActionData:
+        """Sets Battery Soc levels."""
+        json: dict[str, Any] = {"socMin": min, "socTarget": target}
+
+        response = await self._set_vehicle_data("soc-levels", json)
+        return cast(
+            models.KamereonVehicleBatterySocActionData,
+            response.get_attributes(schemas.KamereonVehicleBatterySocActionDataSchema),
         )
 
     async def set_hvac_schedules(
@@ -528,7 +548,21 @@ class RenaultVehicle:
         """Start vehicle charge."""
         endpoint_definition = await self.get_endpoint_definition("actions/charge-start")
         json: dict[str, Any]
-        if endpoint_definition.mode == "kcm":
+        if endpoint_definition.mode == "kcm-settings":
+            # For vehicles like Renault 5 E-TECH, Scenic E-TECH that use ev/settings
+            # endpoint. Based on analysis of MyRenault app behavior (issue #1348):
+            # - GET current settings
+            # - Disable all scheduled programs (programActivationStatus: false)
+            # - POST the modified settings back
+            # This triggers immediate charging by disabling scheduled mode.
+            get_settings_response = await self._get_vehicle_data(endpoint_definition)
+            current_settings = get_settings_response.raw_data
+            # Disable all programs to trigger immediate charging
+            if "programs" in current_settings:
+                for program in current_settings["programs"]:
+                    program["programActivationStatus"] = False
+            json = current_settings
+        elif endpoint_definition.mode == "kcm":
             json = {
                 "data": {
                     "type": "ChargePauseResume",
