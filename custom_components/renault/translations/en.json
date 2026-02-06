@@ -12,6 +12,9 @@
             "invalid_credentials": "Invalid authentication",
             "unknown": "Unexpected error"
         },
+        "initiate_flow": {
+            "user": "Add account"
+        },
         "step": {
             "kamereon": {
                 "data": {
@@ -70,6 +73,12 @@
             }
         },
         "button": {
+            "flash_lights": {
+                "name": "Flash lights"
+            },
+            "sound_horn": {
+                "name": "Sound horn"
+            },
             "start_air_conditioner": {
                 "name": "Start air conditioner"
             },

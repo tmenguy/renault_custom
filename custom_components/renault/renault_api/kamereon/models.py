@@ -55,6 +55,10 @@ COMMON_ERRRORS: list[dict[str, Any]] = [
         "errorCode": "err.func.wired.forbidden",
         "error_type": exceptions.ForbiddenException,
     },
+    {
+        "errorCode": "409001",
+        "error_type": exceptions.ChargeModeInProgressException,
+    },
 ]
 
 VEHICLE_SPECIFICATIONS: dict[str, dict[str, Any]] = {
@@ -159,6 +163,30 @@ _KCM_ENDPOINTS: dict[str, EndpointDefinition] = {
 }
 
 _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
+    "A4E1VE": {  # Renault R4 E-Tech
+        "actions/charge-set-mode": None,  # err.func.wired.invalid-body
+        "actions/charge-set-schedule": None,  # err.func.wired.forbidden
+        "actions/charge-start": _KCM_ENDPOINTS["actions/charge-start-via-settings"],
+        "actions/charge-stop": None,  # err.func.wired.invalid-body-format
+        "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
+        "actions/hvac-set-schedule": None,  # err.func.wired.forbidden
+        "actions/hvac-start": _DEFAULT_ENDPOINTS["actions/hvac-start"],
+        "actions/hvac-stop": _DEFAULT_ENDPOINTS["actions/hvac-stop"],
+        "actions/lights-start": _DEFAULT_ENDPOINTS["actions/lights-start"],
+        "battery-status": _DEFAULT_ENDPOINTS["battery-status"],
+        "charge-history": None,  # err.func.wired.not-found (url does not exist)
+        "charge-mode": None,  # access forbidden / action invalid-body
+        "charge-schedule": _KCM_ENDPOINTS["charge-schedule"],
+        "charges": _DEFAULT_ENDPOINTS["charges"],
+        "cockpit": _DEFAULT_ENDPOINTS["cockpit"],
+        "hvac-status": _DEFAULT_ENDPOINTS["hvac-status"],
+        "location": _DEFAULT_ENDPOINTS["location"],
+        "lock-status": None,  # 404 There is no data for this vin and uid
+        "notification-settings": None,  # 400001 The vehicle does not have a GDC gateway
+        "pressure": None,  # 404 There is no data for this vin and uid
+        "res-state": None,  # 404 There is no data for this vin and uid
+        "soc-levels": _DEFAULT_ENDPOINTS["soc-levels"],
+    },
     "A5E1AE": {  # Alpine A290
         "actions/charge-start": None,  # Reason: The access is forbidden,
         "actions/charge-stop": None,  # Reason: The access is forbidden,
@@ -311,6 +339,8 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
         "res-state": None,
     },
     "XCB1VE": {  # MEGANE E-TECH
+        "actions/charge-start": _DEFAULT_ENDPOINTS["actions/charge-start"],
+        "actions/charge-stop": None,  # Reason: err.func.wired.invalid-body-format
         "battery-status": _DEFAULT_ENDPOINTS["battery-status"],
         "charge-history": None,  # Reason: "err.func.wired.not-found"
         "charge-mode": None,  # Reason: "err.func.vcps.ev.charge-mode.error"
@@ -429,12 +459,16 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
     },
     "XJB2CP": {  # Renault Symbioz 2025
         "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
+        "actions/hvac-start": None,  # err.func.wired.forbidden
         "actions/lights-start": _DEFAULT_ENDPOINTS["actions/lights-start"],
+        "battery-status": None,  # err.func.wired.notFound
+        "charge-mode": None,  # "err.func.wired.forbidden"
         "cockpit": _DEFAULT_ENDPOINTS["cockpit"],  # confirmed
-        "hvac-status": None,
+        "hvac-status": None,  # err.func.wired.notFound
         "location": _DEFAULT_ENDPOINTS["location"],
-        "lock-status": None,
-        "res-state": None,
+        "lock-status": None,  # "err.func.wired.notFound"
+        "res-state": None,  # "err.func.wired.notFound"
+        "pressure": None,  # err.func.wired.notFound
     },
     "XJB1SU": {  # CAPTUR II
         "battery-status": _DEFAULT_ENDPOINTS["battery-status"],
@@ -643,8 +677,9 @@ class KamereonVehicleDetails(BaseModel):
 
         rendition: dict[str, str] = next(
             filter(
-                lambda rendition: rendition.get("resolutionType")
-                == f"ONE_MYRENAULT_{size.name}",
+                lambda rendition: (
+                    rendition.get("resolutionType") == f"ONE_MYRENAULT_{size.name}"
+                ),
                 asset.get("renditions", [{}]),
             )
         )
