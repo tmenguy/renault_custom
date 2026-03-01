@@ -196,7 +196,7 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
                                 percent_value = None
 
                     if percent_value is not None:
-                        if autonomy is None or autonomy < 160:
+                        if autonomy is None or autonomy < 130:
                             # if the autonomy is less than 175km ... we are 100% value, we assume that the battery is not full
                             # we can use a direct hard coded constant as the twingo III has a known unique 22kWh battery
                             # and a unique motor and consumption

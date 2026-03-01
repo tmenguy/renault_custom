@@ -50,7 +50,7 @@ mkdir -p ${path}
 rm -f ${path}/*.py
 
 gh_path="${GH_RAW_BASE}/${GH_ACCOUNT}/${GH_REPO}/${GH_BRANCH}/src/renault_api/cli/charge"
-files="__init__.py commands.py control.py history.py schedule.py"
+files="__init__.py commands.py control.py history.py schedule.py soc_levels.py"
 
 for file in ${files}; do
   wget ${gh_path}/${file} -O ${path}/${file}
