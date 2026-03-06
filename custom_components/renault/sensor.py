@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Generic, cast
 try:
     from .renault_api.kamereon.models import (
         KamereonVehicleBatteryStatusData,
+        KamereonVehicleChargingSettingsData,
         KamereonVehicleCockpitData,
         KamereonVehicleHvacStatusData,
         KamereonVehicleLocationData,
@@ -21,6 +22,7 @@ try:
 except Exception:  # pylint: disable=broad-except
     from renault_api.kamereon.models import (
         KamereonVehicleBatteryStatusData,
+        KamereonVehicleChargingSettingsData,
         KamereonVehicleCockpitData,
         KamereonVehicleHvacStatusData,
         KamereonVehicleLocationData,
@@ -277,6 +279,13 @@ def _get_utc_value(entity: RenaultSensor[T]) -> datetime:
     return as_utc(original_dt)
 
 
+def _get_charging_settings_mode_formatted(entity: RenaultSensor[T]) -> str | None:
+    """Return the charging_settings mode of this entity."""
+    data = cast(KamereonVehicleChargingSettingsData, entity.coordinator.data)
+    charging_mode = data.mode if data else None
+    return charging_mode.lower() if charging_mode else None
+
+
 SENSOR_TYPES: tuple[RenaultSensorEntityDescription[Any], ...] = (
     RenaultSensorEntityDescription(
         key="battery_level",
@@ -488,6 +497,20 @@ SENSOR_TYPES: tuple[RenaultSensorEntityDescription[Any], ...] = (
         entity_class=RenaultSensor[KamereonVehicleResStateData],
         entity_registry_enabled_default=False,
         translation_key="res_state_code",
+    ),
+    RenaultSensorEntityDescription(
+        key="charging_settings_mode",
+        coordinator="charging_settings",
+        data_key="mode",
+        translation_key="charging_settings_mode",
+        entity_class=RenaultSensor[KamereonVehicleChargingSettingsData],
+        device_class=SensorDeviceClass.ENUM,
+        options=[
+            "always",
+            "delayed",
+            "scheduled",
+        ],
+        value_lambda=_get_charging_settings_mode_formatted,
     ),
     RenaultSensorEntityDescription(
         key="front_left_pressure",

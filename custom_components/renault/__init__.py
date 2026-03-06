@@ -1,6 +1,7 @@
 """Support for Renault devices."""
 
 import aiohttp
+
 try:
     from .renault_api.gigya.exceptions import GigyaException
 except Exception:  # pylint: disable=broad-except
