@@ -132,7 +132,6 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
         plug_status_native = data.plugStatus
 
         autonomy = entity._get_data_attr("batteryAutonomy")
-        remaining_charge_mn = entity._get_data_attr("chargingRemainingTime")
 
         if charging_status is None:
             charging_status = ChargeState.UNAVAILABLE
@@ -148,8 +147,6 @@ def _get_battery_level(entity: RenaultSensor[T]) -> StateType:
 
             if autonomy is not None and autonomy >= 150:
                 # all good, we are at 100% and the autonomy is ok
-                entity._private_data["had_a_good_100"] = True
-            elif remaining_charge_mn is not None and remaining_charge_mn < 12:
                 entity._private_data["had_a_good_100"] = True
             else:
                 # for the twingo III there is a known issue with the battery level when at 100% : it can be completely erroneous

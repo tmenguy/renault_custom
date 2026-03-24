@@ -274,7 +274,7 @@ class RenaultVehicle:
         """Get vehicle charge schedule."""
         endpoint_definition = await self.get_endpoint_definition("charge-schedule")
         response = await self._get_vehicle_data(endpoint_definition)
-        if endpoint_definition.mode == "kcm":
+        if endpoint_definition.mode == "kcm-settings":
             return response.raw_data
         return response.raw_data["data"]["attributes"]  # type:ignore[no-any-return]
 
@@ -552,8 +552,10 @@ class RenaultVehicle:
             response.get_attributes(schemas.KamereonVehicleChargeModeActionDataSchema),
         )
 
-    async def set_charge_start(self) -> models.KamereonVehicleChargingStartActionData:
-        """Start vehicle charge."""
+    async def set_charge_start(
+        self, when: datetime | None = None
+    ) -> models.KamereonVehicleChargingStartActionData:
+        """Start vehicle charge with optional delay."""
         endpoint_definition = await self.get_endpoint_definition("actions/charge-start")
         json: dict[str, Any]
         if endpoint_definition.mode == "kcm-settings":
@@ -570,7 +572,7 @@ class RenaultVehicle:
                 for program in current_settings["programs"]:
                     program["programActivationStatus"] = False
             json = current_settings
-        elif endpoint_definition.mode == "kcm":
+        elif endpoint_definition.mode == "kcm-pause-resume":
             json = {
                 "data": {
                     "type": "ChargePauseResume",
@@ -579,6 +581,20 @@ class RenaultVehicle:
                     },
                 }
             }
+        elif endpoint_definition.mode == "kcm":
+            json = {
+                "data": {
+                    "type": "ChargingStart",
+                    "attributes": {
+                        "action": "start",
+                    },
+                }
+            }
+            if when:
+                start_date_time = when.astimezone(timezone.utc).strftime(
+                    PERIOD_TZ_FORMAT
+                )
+                json["data"]["attributes"]["startDateTime"] = start_date_time
         else:
             json = {
                 "data": {
@@ -600,7 +616,7 @@ class RenaultVehicle:
         """Start vehicle charge."""
         endpoint_definition = await self.get_endpoint_definition("actions/charge-stop")
         json: dict[str, Any]
-        if endpoint_definition.mode == "kcm":
+        if endpoint_definition.mode == "kcm-pause-resume":
             json = {
                 "data": {
                     "type": "ChargePauseResume",
