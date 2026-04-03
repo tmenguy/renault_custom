@@ -6,10 +6,7 @@ from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any, cast
 
-try:
-    from .renault_api.kamereon.models import KamereonVehicleBatterySocData
-except Exception:
-    from renault_api.kamereon.models import KamereonVehicleBatterySocData
+from renault_api.kamereon.models import KamereonVehicleBatterySocData
 
 from homeassistant.components.number import (
     NumberDeviceClass,

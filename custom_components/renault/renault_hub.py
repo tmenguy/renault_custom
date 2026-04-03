@@ -7,16 +7,10 @@ from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING
 
-try:
-    from .renault_api.gigya.exceptions import InvalidCredentialsException
-    from .renault_api.kamereon.models import KamereonVehiclesLink
-    from .renault_api.renault_account import RenaultAccount
-    from .renault_api.renault_client import RenaultClient
-except Exception:  # pylint: disable=broad-except
-    from renault_api.gigya.exceptions import InvalidCredentialsException
-    from renault_api.kamereon.models import KamereonVehiclesLink
-    from renault_api.renault_account import RenaultAccount
-    from renault_api.renault_client import RenaultClient
+from renault_api.gigya.exceptions import InvalidCredentialsException
+from renault_api.kamereon.models import KamereonVehiclesLink
+from renault_api.renault_account import RenaultAccount
+from renault_api.renault_client import RenaultClient
 
 from homeassistant.const import (
     ATTR_IDENTIFIERS,

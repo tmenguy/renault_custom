@@ -3,9 +3,15 @@
 import aiohttp
 
 try:
-    from .renault_api.gigya.exceptions import GigyaException
-except Exception:  # pylint: disable=broad-except
-    from renault_api.gigya.exceptions import GigyaException
+    from . import renault_api
+except ImportError:
+    import renault_api
+else:
+    import sys
+    # Register bundled renault_api so all integration files can use plain `import renault_api`
+    sys.modules.setdefault("renault_api", renault_api)
+
+from renault_api.gigya.exceptions import GigyaException
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME

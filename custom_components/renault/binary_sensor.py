@@ -5,12 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-try:
-    from .renault_api.kamereon.enums import ChargeState, PlugState
-    from .renault_api.kamereon.models import KamereonVehicleBatteryStatusData
-except Exception:  # pylint: disable=broad-except
-    from renault_api.kamereon.enums import ChargeState, PlugState
-    from renault_api.kamereon.models import KamereonVehicleBatteryStatusData
+from renault_api.kamereon.enums import ChargeState, PlugState
+from renault_api.kamereon.models import KamereonVehicleBatteryStatusData
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,

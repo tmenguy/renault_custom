@@ -8,28 +8,17 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Generic, cast
 
-try:
-    from .renault_api.kamereon.models import (
-        KamereonVehicleBatteryStatusData,
-        KamereonVehicleChargingSettingsData,
-        KamereonVehicleCockpitData,
-        KamereonVehicleHvacStatusData,
-        KamereonVehicleLocationData,
-        KamereonVehicleResStateData,
-        KamereonVehicleTyrePressureData,
-    )
-    from .renault_api.kamereon.enums import ChargeState, PlugState
-except Exception:  # pylint: disable=broad-except
-    from renault_api.kamereon.models import (
-        KamereonVehicleBatteryStatusData,
-        KamereonVehicleChargingSettingsData,
-        KamereonVehicleCockpitData,
-        KamereonVehicleHvacStatusData,
-        KamereonVehicleLocationData,
-        KamereonVehicleResStateData,
-        KamereonVehicleTyrePressureData,
-    )
-    from renault_api.kamereon.enums import ChargeState, PlugState
+from renault_api.kamereon.models import (
+    KamereonVehicleBatteryStatusData,
+    KamereonVehicleChargingSettingsData,
+    KamereonVehicleCockpitData,
+    KamereonVehicleHvacStatusData,
+    KamereonVehicleLocationData,
+    KamereonVehicleResStateData,
+    KamereonVehicleTyrePressureData,
+)
+
+from renault_api.kamereon.enums import ChargeState, PlugState
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
