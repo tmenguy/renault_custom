@@ -147,7 +147,7 @@ def _get_battery_level(entity: RenaultSensor[KamereonVehicleBatteryStatusData]) 
         plug_status = data.get_plug_status()
         plug_status_native = data.plugStatus
 
-        autonomy = entity._get_data_attr("batteryAutonomy")
+        autonomy = data.batteryAutonomy
 
         if charging_status is None:
             charging_status = ChargeState.UNAVAILABLE
@@ -246,7 +246,7 @@ def _get_battery_level(entity: RenaultSensor[KamereonVehicleBatteryStatusData]) 
                         )
 
         else:
-            entity._private_data["last_non_full_autonomy_value"] = entity._get_data_attr("batteryAutonomy")
+            entity._private_data["last_non_full_autonomy_value"] = data.batteryAutonomy
             entity._private_data["last_non_full_battery_value"] = orig_value
             entity._private_data["last_non_full_battery_value_timestamp"] = datetime.now()
             entity._private_data["had_abnormal_transition_100"] = False
