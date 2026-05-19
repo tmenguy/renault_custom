@@ -1,5 +1,7 @@
 """Proxy to handle account communication with Renault servers."""
 
+from __future__ import annotations
+
 import asyncio
 from datetime import timedelta
 import logging

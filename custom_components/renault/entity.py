@@ -1,21 +1,28 @@
 """Base classes for Renault entities."""
 
-from dataclasses import dataclass
+from __future__ import annotations
 
-from renault_api.kamereon.models import KamereonVehicleDataAttributes
+from dataclasses import dataclass
+from typing import cast
 
 from homeassistant.helpers.entity import Entity, EntityDescription
+from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import RenaultDataUpdateCoordinator
+from .coordinator import RenaultDataUpdateCoordinator, T
 from .renault_vehicle import RenaultVehicleProxy
 
 
-@dataclass(frozen=True, kw_only=True)
-class RenaultDataEntityDescription(EntityDescription):
-    """Class describing Renault data entities."""
+@dataclass(frozen=True)
+class RenaultDataRequiredKeysMixin:
+    """Mixin for required keys."""
 
     coordinator: str
+
+
+@dataclass(frozen=True)
+class RenaultDataEntityDescription(EntityDescription, RenaultDataRequiredKeysMixin):
+    """Class describing Renault data entities."""
 
 
 class RenaultEntity(Entity):
@@ -36,7 +43,7 @@ class RenaultEntity(Entity):
         self._attr_unique_id = f"{self.vehicle.details.vin}_{description.key}".lower()
 
 
-class RenaultDataEntity[T: KamereonVehicleDataAttributes](
+class RenaultDataEntity(
     CoordinatorEntity[RenaultDataUpdateCoordinator[T]], RenaultEntity
 ):
     """Implementation of a Renault entity with a data coordinator."""
@@ -49,6 +56,10 @@ class RenaultDataEntity[T: KamereonVehicleDataAttributes](
         """Initialise entity."""
         super().__init__(vehicle.coordinators[description.coordinator])
         RenaultEntity.__init__(self, vehicle, description)
+
+    def _get_data_attr(self, key: str) -> StateType:
+        """Return the attribute value from the coordinator data."""
+        return cast(StateType, getattr(self.coordinator.data, key))
 
     @property
     def assumed_state(self) -> bool:

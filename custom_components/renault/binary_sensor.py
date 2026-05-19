@@ -1,15 +1,12 @@
 """Support for Renault binary sensors."""
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import dataclass
 
 from renault_api.kamereon.enums import ChargeState, PlugState
-from renault_api.kamereon.models import (
-    KamereonVehicleBatteryStatusData,
-    KamereonVehicleDataAttributes,
-    KamereonVehicleHvacStatusData,
-    KamereonVehicleLockStatusData,
-)
+from renault_api.kamereon.models import KamereonVehicleBatteryStatusData
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -18,6 +15,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.typing import StateType
 
 from . import RenaultConfigEntry
 from .entity import RenaultDataEntity, RenaultDataEntityDescription
@@ -37,13 +35,15 @@ _PLUG_FROM_CHARGE_STATUS: set[ChargeState] = {
 
 
 @dataclass(frozen=True, kw_only=True)
-class RenaultBinarySensorEntityDescription[T: KamereonVehicleDataAttributes](
+class RenaultBinarySensorEntityDescription(
     BinarySensorEntityDescription,
     RenaultDataEntityDescription,
 ):
     """Class describing Renault binary sensor entities."""
 
-    value_lambda: Callable[[RenaultBinarySensor[T]], bool | None]
+    on_key: str | None = None
+    on_value: StateType | None = None
+    value_lambda: Callable[[RenaultBinarySensor], bool | None] | None = None
 
 
 async def async_setup_entry(
@@ -61,130 +61,93 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class RenaultBinarySensor[T: KamereonVehicleDataAttributes](
-    RenaultDataEntity[T], BinarySensorEntity
+class RenaultBinarySensor(
+    RenaultDataEntity[KamereonVehicleBatteryStatusData], BinarySensorEntity
 ):
     """Mixin for binary sensor specific attributes."""
 
-    entity_description: RenaultBinarySensorEntityDescription[T]
+    entity_description: RenaultBinarySensorEntityDescription
 
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        return self.entity_description.value_lambda(self)
+
+        if self.entity_description.value_lambda is not None:
+            return self.entity_description.value_lambda(self)
+        if self.entity_description.on_key is None:
+            raise NotImplementedError("Either value_lambda or on_key must be set")
+        if (data := self._get_data_attr(self.entity_description.on_key)) is None:
+            return None
+
+        return data == self.entity_description.on_value
 
 
-def _plugged_in_value_lambda(
-    self: RenaultBinarySensor[KamereonVehicleBatteryStatusData],
-) -> bool | None:
+def _plugged_in_value_lambda(self: RenaultBinarySensor) -> bool | None:
     """Return true if the vehicle is plugged in."""
-    if (plug_status := self.coordinator.data.get_plug_status()) is not None:
+
+    data = self.coordinator.data
+    plug_status = data.get_plug_status() if data else None
+
+    if plug_status is not None:
         return plug_status == PlugState.PLUGGED
 
-    if (
-        charging_status := self.coordinator.data.get_charging_status()
-    ) is not None and charging_status in _PLUG_FROM_CHARGE_STATUS:
+    charging_status = data.get_charging_status() if data else None
+    if charging_status is not None and charging_status in _PLUG_FROM_CHARGE_STATUS:
         return True
 
     return None
 
 
-BINARY_SENSOR_TYPES: tuple[RenaultBinarySensorEntityDescription, ...] = (
-    RenaultBinarySensorEntityDescription[KamereonVehicleBatteryStatusData](
-        key="plugged_in",
-        coordinator="battery",
-        device_class=BinarySensorDeviceClass.PLUG,
-        value_lambda=_plugged_in_value_lambda,
-    ),
-    RenaultBinarySensorEntityDescription[KamereonVehicleBatteryStatusData](
-        key="charging",
-        coordinator="battery",
-        device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
-        value_lambda=lambda e: (
-            e.coordinator.data.chargingStatus == ChargeState.CHARGE_IN_PROGRESS.value
-            if e.coordinator.data.chargingStatus is not None
-            else None
+BINARY_SENSOR_TYPES: tuple[RenaultBinarySensorEntityDescription, ...] = tuple(
+    [
+        RenaultBinarySensorEntityDescription(
+            key="plugged_in",
+            coordinator="battery",
+            device_class=BinarySensorDeviceClass.PLUG,
+            value_lambda=_plugged_in_value_lambda,
         ),
-    ),
-    RenaultBinarySensorEntityDescription[KamereonVehicleHvacStatusData](
-        key="hvac_status",
-        coordinator="hvac_status",
-        translation_key="hvac_status",
-        value_lambda=lambda e: (
-            e.coordinator.data.hvacStatus == "on"
-            if e.coordinator.data.hvacStatus is not None
-            else None
+        RenaultBinarySensorEntityDescription(
+            key="charging",
+            coordinator="battery",
+            device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
+            on_key="chargingStatus",
+            on_value=ChargeState.CHARGE_IN_PROGRESS.value,
         ),
-    ),
-    RenaultBinarySensorEntityDescription[KamereonVehicleLockStatusData](
-        key="lock_status",
-        coordinator="lock_status",
-        # lock: on means open (unlocked), off means closed (locked)
-        device_class=BinarySensorDeviceClass.LOCK,
-        value_lambda=lambda e: (
-            e.coordinator.data.lockStatus == "unlocked"
-            if e.coordinator.data.lockStatus is not None
-            else None
+        RenaultBinarySensorEntityDescription(
+            key="hvac_status",
+            coordinator="hvac_status",
+            on_key="hvacStatus",
+            on_value="on",
+            translation_key="hvac_status",
         ),
-    ),
-    RenaultBinarySensorEntityDescription[KamereonVehicleLockStatusData](
-        key="hatch_status",
-        coordinator="lock_status",
-        # On means open, Off means closed
-        device_class=BinarySensorDeviceClass.DOOR,
-        translation_key="hatch_status",
-        value_lambda=lambda e: (
-            e.coordinator.data.hatchStatus == "open"
-            if e.coordinator.data.hatchStatus is not None
-            else None
+        RenaultBinarySensorEntityDescription(
+            key="lock_status",
+            coordinator="lock_status",
+            # lock: on means open (unlocked), off means closed (locked)
+            device_class=BinarySensorDeviceClass.LOCK,
+            on_key="lockStatus",
+            on_value="unlocked",
         ),
-    ),
-    RenaultBinarySensorEntityDescription[KamereonVehicleLockStatusData](
-        key="rear_left_door_status",
-        coordinator="lock_status",
-        # On means open, Off means closed
-        device_class=BinarySensorDeviceClass.DOOR,
-        translation_key="rear_left_door_status",
-        value_lambda=lambda e: (
-            e.coordinator.data.doorStatusRearLeft == "open"
-            if e.coordinator.data.doorStatusRearLeft is not None
-            else None
+        RenaultBinarySensorEntityDescription(
+            key="hatch_status",
+            coordinator="lock_status",
+            # On means open, Off means closed
+            device_class=BinarySensorDeviceClass.DOOR,
+            on_key="hatchStatus",
+            on_value="open",
+            translation_key="hatch_status",
         ),
-    ),
-    RenaultBinarySensorEntityDescription[KamereonVehicleLockStatusData](
-        key="rear_right_door_status",
-        coordinator="lock_status",
-        # On means open, Off means closed
-        device_class=BinarySensorDeviceClass.DOOR,
-        translation_key="rear_right_door_status",
-        value_lambda=lambda e: (
-            e.coordinator.data.doorStatusRearRight == "open"
-            if e.coordinator.data.doorStatusRearRight is not None
-            else None
-        ),
-    ),
-    RenaultBinarySensorEntityDescription[KamereonVehicleLockStatusData](
-        key="driver_door_status",
-        coordinator="lock_status",
-        # On means open, Off means closed
-        device_class=BinarySensorDeviceClass.DOOR,
-        translation_key="driver_door_status",
-        value_lambda=lambda e: (
-            e.coordinator.data.doorStatusDriver == "open"
-            if e.coordinator.data.doorStatusDriver is not None
-            else None
-        ),
-    ),
-    RenaultBinarySensorEntityDescription[KamereonVehicleLockStatusData](
-        key="passenger_door_status",
-        coordinator="lock_status",
-        # On means open, Off means closed
-        device_class=BinarySensorDeviceClass.DOOR,
-        translation_key="passenger_door_status",
-        value_lambda=lambda e: (
-            e.coordinator.data.doorStatusPassenger == "open"
-            if e.coordinator.data.doorStatusPassenger is not None
-            else None
-        ),
-    ),
+    ]
+    + [
+        RenaultBinarySensorEntityDescription(
+            key=f"{door.replace(' ', '_').lower()}_door_status",
+            coordinator="lock_status",
+            # On means open, Off means closed
+            device_class=BinarySensorDeviceClass.DOOR,
+            on_key=f"doorStatus{door.replace(' ', '')}",
+            on_value="open",
+            translation_key=f"{door.lower().replace(' ', '_')}_door_status",
+        )
+        for door in ("Rear Left", "Rear Right", "Driver", "Passenger")
+    ],
 )
