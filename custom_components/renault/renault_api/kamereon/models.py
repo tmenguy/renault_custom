@@ -113,6 +113,9 @@ _DEFAULT_ENDPOINTS: dict[str, EndpointDefinition] = {
     "actions/lights-start": EndpointDefinition(
         "/kca/car-adapter/v1/cars/{vin}/actions/horn-lights"
     ),
+    "actions/refresh-location": EndpointDefinition(
+        "/kca/car-adapter/v1/cars/{vin}/actions/refresh-location",
+    ),
     "alerts": EndpointDefinition("/vehicles/{vin}/alerts"),
     "battery-status": EndpointDefinition(
         "/kca/car-adapter/v2/cars/{vin}/battery-status"
@@ -240,23 +243,33 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
         "soc-levels": None,  # err.func.wired.forbidden
     },
     "R5E1VE": {  # Renault 5 E-TECH
+        "actions/charge-set-mode": None,  # Reason: err.func.wired.forbidden
+        "actions/charge-set-schedule": None,  # Reason: err.func.wired.forbidden
         "actions/charge-start": _KCM_ENDPOINTS["actions/charge-start-via-settings"],
         "actions/charge-stop": None,  # Not supported - use charger to stop
         "actions/horn-start": _DEFAULT_ENDPOINTS["actions/horn-start"],
+        "actions/hvac-set-schedule": None,  # Reason: err.func.wired.forbidden
         "actions/hvac-start": _DEFAULT_ENDPOINTS["actions/hvac-start"],
+        "actions/hvac-stop": _KCA_ALTERNATIVE_ENDPOINTS["actions/hvac-stop"],
         "actions/lights-start": _DEFAULT_ENDPOINTS["actions/lights-start"],
+        "actions/refresh-location": _DEFAULT_ENDPOINTS["actions/refresh-location"],
+        "alerts": _DEFAULT_ENDPOINTS["alerts"],
         "battery-status": _DEFAULT_ENDPOINTS["battery-status"],
-        "charge-history": None,  # Reason: "you should not be there..."
-        "charge-mode": None,  # Reason: The access is forbidden
+        "charge-history": None,  # Reason: err.func.wired.not-found
+        "charge-mode": None,  # Reason: err.func.wired.forbidden
         "charge-schedule": _KCM_ENDPOINTS["charge-schedule-via-settings"],
         "charges": _DEFAULT_ENDPOINTS["charges"],
+        "charging-settings": None,  # Reason: err.func.wired.forbidden
         "cockpit": _DEFAULT_ENDPOINTS["cockpit"],
+        "hvac-history": None,  # Reason: err.func.wired.not-found
+        "hvac-sessions": None,  # Reason: err.func.wired.not-found
         "hvac-settings": _DEFAULT_ENDPOINTS["hvac-settings"],
         "hvac-status": _DEFAULT_ENDPOINTS["hvac-status"],
         "location": _DEFAULT_ENDPOINTS["location"],
-        "lock-status": None,  # Reason: 404
-        "pressure": None,  # Reason: 404
-        "res-state": None,  # Reason: The access is forbidden
+        "lock-status": None,  # Reason: err.func.wired.notFound
+        "notification-settings": None,  # Reason: err.func.vcps.users-helper.get-notification-settings.error  # noqa: E501
+        "pressure": None,  # Reason: err.func.wired.notFound
+        "res-state": None,  # Reason: err.func.wired.forbidden
         "soc-levels": _DEFAULT_ENDPOINTS["soc-levels"],
     },
     "X071VE": {  # TWINGO III
@@ -315,6 +328,11 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
     "XBG1VE": {  # DACIA SPRING
         "actions/charge-start": _KCM_ENDPOINTS["actions/charge-start-via-pause-resume"],
         "actions/charge-stop": _KCM_ENDPOINTS["actions/charge-stop-via-pause-resume"],
+        "actions/horn-start": None,  # Reason: The access is forbidden,
+        "actions/hvac-start": _DEFAULT_ENDPOINTS["actions/hvac-start"],
+        "actions/hvac-stop": _KCA_ALTERNATIVE_ENDPOINTS["actions/hvac-stop"],
+        "actions/lights-start": None,  # Reason: The access is forbidden,
+        "actions/refresh-location": _DEFAULT_ENDPOINTS["actions/refresh-location"],
         "alerts": None,  # Reason: "err.func.wired.not-found"
         "battery-status": _DEFAULT_ENDPOINTS["battery-status"],
         "charge-history": None,  # Reason: "err.func.wired.not-found"
@@ -444,6 +462,11 @@ _VEHICLE_ENDPOINTS: dict[str, dict[str, EndpointDefinition | None]] = {
         "hvac-status": None,
     },
     "XJA2VP": {  # CLIO V
+        "actions/charge-start": None,  # err.func.wired.forbidden
+        "actions/charge-stop": None,  # err.func.wired.invalid-body-format
+        "actions/horn-start": None,  # err.func.wired.forbidden
+        "actions/hvac-start": None,  # err.func.wired.forbidden
+        "actions/lights-start": None,  # err.func.wired.forbidden
         "alerts": None,  # err.func.wired.not-found
         "battery-status": None,  # err.func.wired.notFound
         "charge-mode": None,  # err.func.wired.forbidden
@@ -560,8 +583,9 @@ def get_model_endpoints(
         if model_code not in _ALREADY_WARNED_VEHICLE:
             _ALREADY_WARNED_VEHICLE.add(model_code)
             _LOGGER.warning(
-                "Model %s is not documented, using default endpoints."
-                " Please help to document it at https://github.com/hacf-fr/renault-api",
+                "Model %s is not documented, using default endpoints. "
+                "Please help document it at "
+                "https://github.com/hacf-fr/renault-api/issues/1747",
                 model_code,
             )
         return _DEFAULT_ENDPOINTS
@@ -581,8 +605,9 @@ def get_model_endpoint(
         if key not in _ALREADY_WARNED_VEHICLE_ENDPOINT:
             _ALREADY_WARNED_VEHICLE_ENDPOINT.add(key)
             _LOGGER.warning(
-                "Endpoint %s for model %s is not documented, using default endpoints."
-                " Please help to document it at https://github.com/hacf-fr/renault-api",
+                "Endpoint %s for model %s is not documented, using default endpoints. "
+                "Please help document it at "
+                "https://github.com/hacf-fr/renault-api/issues/1747",
                 endpoint,
                 model_code,
             )
@@ -878,6 +903,8 @@ class KamereonVehicleBatteryStatusData(KamereonVehicleDataAttributes):
     chargingStatus: float | None
     chargingRemainingTime: int | None
     chargingInstantaneousPower: float | None
+    chargingRemainingTimeLastUpdateDateTime: str | None
+    V2L_SystemStatusDisplay: int | None
 
     def get_plug_status(self) -> enums.PlugState | None:
         """Return plug status."""
