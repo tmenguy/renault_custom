@@ -1,7 +1,7 @@
 {
   "domain": "renault",
   "name": "Renault",
-  "version": "2026.05.19",
+  "version": "2026.06.04",
   "codeowners": ["@epenet"],
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/renault",
