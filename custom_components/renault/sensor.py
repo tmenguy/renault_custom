@@ -4,7 +4,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, override
+from typing import Any, override, cast
 
 from renault_api.kamereon.models import (
     KamereonVehicleBatteryStatusData,
@@ -458,6 +458,7 @@ SENSOR_TYPES: tuple[RenaultSensorEntityDescription[Any], ...] = (
         options=[
             "always",
             "delayed",
+            "delegated",
             "scheduled",
         ],
         value_lambda=_get_charging_settings_mode_formatted,
